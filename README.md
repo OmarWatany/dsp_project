@@ -1,5 +1,10 @@
-
 ## venv 
+### first time 
+
+```console
+  python -m venv .
+  pip install -r ./requirements.txt
+```
 
 ### linux 
 ```console
