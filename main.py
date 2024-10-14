@@ -1,49 +1,49 @@
-from enum import Enum
+import signalProcessing as sp
 import streamlit as st
 import matplotlib.pyplot as plt
-import math
 
 
-class Signal_type(Enum):
-    Time = 0
-    Freq = 1
-
-
-def generate_signal(
-    sin_flag: bool,
-    periodic: bool,
-    signal_type: Signal_type,
-    amp,
-    sampling_freq,
-    analog_freq,
-    phase_shift,
-):
-    w = 2 * math.pi * (analog_freq / sampling_freq)
-    if sin_flag:
-        s = [amp * math.sin(w * i + phase_shift) for i in range(0, sampling_freq)]
+def Plot_signal(Continuous: bool, Signal, Indices):
+    if Continuous:
+        continuous_fig, continuous_ax = plt.subplots(figsize=(fig_width, fig_height))
+        continuous_ax.plot(Indices, Signal)
+        st.pyplot(continuous_fig)  # continuous
     else:
-        s = [amp * math.cos(w * i + phase_shift) for i in range(0, sampling_freq)]
-    return s, [i for i in range(0, sampling_freq)]
+        dis_fig, dis_ax = plt.subplots(figsize=(fig_width, fig_height))
+        dis_ax.stem(Indices, Signal)
+        st.pyplot(dis_fig)  # discrete
 
-
-s, indices = generate_signal(
-    True, False, Signal_type.Time, 3, 720, 360, 1.96349540849362
-)
-# c = generate_signal(False, False, Signal_type.Time, 3, 500, 200, 2.35619449019235)
 
 st.write("""
 # DSP Framwork
 """)
 
+operation = st.selectbox(
+    "Choose Operation",
+    ("Read from file", "Generate"),
+)
 
-fig_width = 10
-fig_height = fig_width / 2
+if operation == "Generate":
+    sin_flag = st.selectbox(
+        "Chose wave",
+        ("Sin", "Cos", "both"),
+    )
+    amp = st.number_input("Insert Amp", value=None, placeholder=0.0)
+    phase_shift = st.number_input("Insert Phase shift", value=None, placeholder=0.0)
+    freq = st.number_input("Insert Freq", value=None, placeholder=0)
+    samplingFreq = st.number_input("Insert Sampling Freq", value=None, placeholder=0)
+    # TODO: Handle Error
+    # if samplingFreq < 2 * freq:
 
-continuous_fig, continuous_ax = plt.subplots(figsize=(fig_width, fig_height))
-continuous_ax.plot(indices, s)
-# Plotting the signal
-st.pyplot(continuous_fig)  # continuous
+    clicked = st.button("Show", type="primary")
 
-dis_fig, dis_ax = plt.subplots(figsize=(fig_width, fig_height))
-dis_ax.stem(indices, s)
-st.pyplot(dis_fig)  # discrete
+    fig_width = 10
+    fig_height = fig_width / 2
+
+    if clicked:
+        s, indices = sp.generate_signal(
+            True, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+        )
+        Plot_signal(True, s, indices)
+else:
+    file_name = st.text_input("File name")
