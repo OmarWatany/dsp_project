@@ -1,2 +1,5 @@
 matplot
 streamlit
+plotly
+pandas
+numpy
