@@ -18,6 +18,8 @@ lib/
 lib64/
 lib64
 bin/
+share/
+etc/
 parts/
 sdist/
 var/
