@@ -64,9 +64,10 @@ def Plot_signal_pd(Continuous: bool, Signal, Indices):
     if Continuous:
         st.line_chart(dt)
 
+# RUN START FROM HERE
 
 st.write("""
-# DSP Framwork
+# DSP Framework
 """)
 
 operation = st.selectbox(
@@ -80,7 +81,7 @@ if operation == "Generate":
         ("Sin", "Cos", "both"),
     )
     amp = st.number_input("Insert Amp", value=0)
-    phase_shift = st.number_input("Insert Phase shift", value=0)
+    phase_shift = st.number_input("Insert Phase shift",format="%f")
     freq = st.number_input("Insert Freq", value=0)
     samplingFreq = st.number_input("Insert Sampling Freq", value=0)
     # TODO: Handle Error
@@ -92,13 +93,48 @@ if operation == "Generate":
     fig_height = fig_width / 2
 
     if clicked:
-        s, indices = sp.generate_signal(
+        cont_fig = go.Figure()
+        disc_fig = go.Figure()
+
+        if sin_flag == "Sin":
+            s, indices = sp.generate_signal(
             True, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
-        )
-        Plot_signal_cont(True, s, indices)
-        Plot_signal_stem(True, s, indices)
+            )
+            Plot_signal_cont(cont_fig,"Sine Wave","blue", s, indices)
+            Plot_signal_stem(disc_fig,"Sine Wave","blue ", s, indices)
+        elif sin_flag == "Cos":
+            s, indices = sp.generate_signal(
+                False, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+            )
+            Plot_signal_cont(cont_fig,"Cosine Wave","blue", s, indices)
+            Plot_signal_stem(disc_fig,"Cosine Wave","blue", s, indices)
+        elif sin_flag == "both":
+            s, s_indices = sp.generate_signal(
+                True, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+            )
+            c, c_indices = sp.generate_signal(
+                False, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+            )
+            Plot_signal_cont(cont_fig,"Sine Wave","blue", s, s_indices)
+            Plot_signal_stem(disc_fig,"Sine Wave","blue", s, s_indices)
+            Plot_signal_cont(cont_fig,"Cosine Wave","red", c, c_indices)
+            Plot_signal_stem(disc_fig,"Cosine Wave","red", c, c_indices)
+        st.plotly_chart(disc_fig)
+        st.plotly_chart(cont_fig)
+
 else:
-    file_name = st.text_input("File name")
+    uploaded_file = st.file_uploader("Upload a signal txt file", type="txt")
+    read_button = st.button("Read Signal")
+    if read_button:
+        if uploaded_file is not None:
+            s,indices  = sp.read_file(uploaded_file)
+            cont_fig = go.Figure()
+            disc_fig = go.Figure()
+
+            Plot_signal_cont(cont_fig, "file", "blue", s,indices)
+            Plot_signal_stem(disc_fig, "file", "blue", s, indices)
+            st.plotly_chart(cont_fig)
+            st.plotly_chart(disc_fig)
 
 
 # Temporary
@@ -120,5 +156,5 @@ Plot_signal_stem(disc_fig, "Sin Wave", "blue", s, s_indices)
 Plot_signal_cont(cont_fig, "Cos Wave", "red", c, s_indices)
 Plot_signal_stem(disc_fig, "Cos Wave", "red", c, c_indices)
 
-st.plotly_chart(cont_fig)
 st.plotly_chart(disc_fig)
+st.plotly_chart(cont_fig)

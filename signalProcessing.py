@@ -23,3 +23,18 @@ def generate_signal(
     else:
         s = [amp * math.cos(w * i + phase_shift) for i in range(0, sampling_freq)]
     return s, [i for i in range(0, sampling_freq)]
+
+def read_file(uploaded_file):
+    file_content = uploaded_file.read().decode("utf-8").splitlines()
+
+    timeFlag = file_content[0]  # First line
+    periodicFlag = file_content[1]  # Second line
+    nOfSamples = int(file_content[2])  # Third line
+
+    indices = []
+    amplitudes = []
+    for line in file_content[3: 3 + nOfSamples]:
+        values = line.strip().split(" ")
+        indices.append(int(values[0]))
+        amplitudes.append(float(values[1]))
+    return amplitudes, indices
