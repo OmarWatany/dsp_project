@@ -1,16 +1,15 @@
 import signalProcessing as sp
 import streamlit as st
-import pandas as pd
 import plotly.graph_objects as go
 
 
-def scatter_cont_sig(fig_cont, Title: str, Color: str, Signal, Indices):
+def scatter_cont_sig(fig_cont, Title: str, Color: str, Signal: sp.Signal):
     # Add a continuous line for the signal
-    ln = 50 if len(Indices) > 50 else len(Indices)
+    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
     fig_cont.add_trace(
         go.Scatter(
-            x=Indices[:ln],
-            y=Signal[:ln],
+            x=Signal.indices[:ln],
+            y=Signal.amplitudes[:ln],
             mode="lines",
             name=Title,
             line=dict(color=Color),
@@ -26,14 +25,14 @@ def scatter_cont_sig(fig_cont, Title: str, Color: str, Signal, Indices):
     )
 
 
-def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal, Indices):
+def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal: sp.Signal):
     # Add a continuous line for the signal
-    ln = 50 if len(Indices) > 50 else len(Indices)
+    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
     for i in range(ln):
         fig_disc.add_trace(
             go.Scatter(
-                x=[Indices[i], Indices[i]],
-                y=[0, Signal[i]],
+                x=[Signal.indices[i], Signal.indices[i]],
+                y=[0, Signal.amplitudes[i]],
                 line=dict(color=Color),
                 mode="lines",
                 showlegend=False,
@@ -41,8 +40,8 @@ def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal, Indices):
         )
     fig_disc.add_trace(
         go.Scatter(
-            x=Indices[:ln],
-            y=Signal[:ln],
+            x=Signal.indices[:ln],
+            y=Signal.amplitudes[:ln],
             mode="markers",
             marker=dict(color=Color, size=8),
             name="Markers",
@@ -59,87 +58,147 @@ def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal, Indices):
     )
 
 
-def Plot_signal_pd(Continuous: bool, Signal, Indices):
-    dt = pd.DataFrame({"Amplitude": Signal})
-    if Continuous:
-        st.line_chart(dt)
+def file_signal(index=-1) -> sp.Signal:
+    if index > 0:
+        title = f"Upload signal {index} txt file"
+    else:
+        title = "Upload signal txt file"
+    uploaded_file = st.file_uploader(title, type="txt", key=index)
+    if uploaded_file is not None:
+        return sp.read_file(uploaded_file)
 
 
-def generated_signal_args() -> sp.Signal:
+def generated_signal(index=0) -> sp.Signal:
+    titles = ["Amp", "Phase shift", "Freq", "Sampling Freq"]
+    for i in range(len(titles)):
+        titles[i] = "Insert " + titles[i] + " " + str(index) if index > 0 else ""
+
     sin_flag = (
         st.selectbox(
-            "Chose wave",
+            "Chose wave " + str(index) if index > 0 else "",
             ("Sin", "Cos"),
         )
         == "Sin"
     )
-    amp = st.number_input("Insert Amp", value=1)
-    phase_shift = st.number_input("Insert Phase shift", value=0.0, format="%f")
-    freq = st.number_input("Insert Freq", value=1)
-    samplingFreq = st.number_input("Insert Sampling Freq", value=10)
+    amp = st.number_input(titles[0], value=1)
+    phase_shift = st.number_input(titles[1], value=0.0, format="%f")
+    freq = st.number_input(titles[2], value=1)
+    samplingFreq = st.number_input(titles[3], value=10)
 
     # TODO: Handle Error
     # if samplingFreq < 2 * freq:
 
+    return sp.generate_signal(
+        sin_flag, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+    )
+
+
+def Plot_signal(sig: sp.Signal):
     clicked = st.button("Show", type="primary")
     if clicked:
-        sig = sp.generate_signal(
-            sin_flag,
-            False,
-            sp.Signal_type.Time,
-            amp,
-            samplingFreq,
-            freq,
-            phase_shift,
-        )
-        return sig
-    return sp.Signal()
+        cont_fig = go.Figure()
+        disc_fig = go.Figure()
+        scatter_cont_sig(cont_fig, "Signal", "blue", sig)
+        scatter_disc_sig(disc_fig, "Signal", "blue", sig)
+        st.plotly_chart(disc_fig)
+        st.plotly_chart(cont_fig)
 
 
-def Plot_signal(s, indices):
-    cont_fig = go.Figure()
-    disc_fig = go.Figure()
-    scatter_cont_sig(cont_fig, "Signal", "blue", s, indices)
-    scatter_disc_sig(disc_fig, "Signal", "blue", s, indices)
-    st.plotly_chart(disc_fig)
-    st.plotly_chart(cont_fig)
+def sig_add(signal_1, signal_2) -> sp.Signal:
+    return signal_1
 
 
-def add_sig(signal_1, signal_2):
-    pass
+def sig_sub(signal_1, signal_2) -> sp.Signal:
+    return signal_1
 
 
-def sub_sig(signal_1, signal_2):
-    pass
+def sig_norm(signal, _range) -> sp.Signal:
+    return signal
 
+
+def sig_mul(signal, value) -> sp.Signal:
+    return signal
+
+
+def todo(signal):
+    return signal
+
+
+# similar to FOS Commands list
+arth_operation = {
+    # two signals
+    "Add": sig_add,
+    "Sub": sig_sub,
+    # signal , value
+    "Mul": sig_mul,
+    # signal , range
+    "Norm": sig_norm,
+    # Todo
+    "Shift": todo,
+    "square": todo,
+    "Accumulate": todo,
+}
 
 if __name__ == "__main__":
-    st.write("""
-    # DSP Framework
-    """)
+    st.title("DSP Framework")
 
-    operation = st.selectbox(
-        "Choose Operation",
-        ("Read from file", "Generate"),
-    )
-    if operation == "Generate":
-        sig = generated_signal_args()
-        Plot_signal(sig.amplitudes, sig.indices)
-    else:
-        uploaded_file = st.file_uploader("Upload a signal txt file", type="txt")
-        read_button = st.button("Read Signal")
-        if read_button and uploaded_file is not None:
-            sig = sp.read_file(uploaded_file)
-            Plot_signal(sig.amplitudes, sig.indices)
+    # st.write("### Select an option:")
+    # arth_op = st.selectbox("Choose Arithmatic arth_op", arth_operation.keys(),label_visibility="hidden")
+    arth_op = st.selectbox("Choose Arithmatic Operation", arth_operation.keys())
+
+    # Todo Accept number of signals
+    if arth_op in ["Add", "Sub"]:
+        signals = []
+        cols = st.columns(2)
+        # for col in cols:
+        for i in range(len(cols)):
+            with cols[i]:
+                operation = st.selectbox(
+                    f"Choose Operation {i+1}",
+                    ("Generate", "Read from file"),
+                    # ("Read from file", "Generate"),
+                )
+                signals.append(
+                    generated_signal(i + 1)
+                    if operation == "Generate"
+                    else file_signal(i + 1)
+                    if operation == "Read from file"
+                    else None
+                )
+
+        # arth_op[arth_op](sig1,sig2)
+        st.markdown("Two arguments")
+
+    if arth_op in ["Mul"]:
+        operation = st.selectbox(
+            "Choose Operation",
+            ("Read from file", "Generate"),
+        )
+
+        sig = (
+            generated_signal()
+            if operation == "Generate"
+            else file_signal()
+            if operation == "Read from file"
+            else None
+        )
+
+        value = st.number_input("Insert Scalar", format="%f")
+        sig = arth_operation[arth_op](sig, value)
+        if sig:
+            Plot_signal(sig)
+
+    if arth_op in ["Norm"]:
+        st.markdown("range")
 
     # Temporary
-    temp_clicked = st.button("Show Temp", type="primary", disabled=True)
+    temp_clicked = st.button("Show Temp", type="primary", disabled=0)
     if temp_clicked:
-        s, s_indices = sp.generate_signal(
+        s = sp.generate_signal(
             True, False, sp.Signal_type.Time, 3, 720, 360, 1.96349540849362
         )
 
-        c, c_indices = sp.generate_signal(
+        c = sp.generate_signal(
             False, False, sp.Signal_type.Time, 3, 500, 200, 2.35619449019235
         )
 
@@ -147,11 +206,10 @@ if __name__ == "__main__":
         cont_fig = go.Figure()
         disc_fig = go.Figure()
 
-        scatter_cont_sig(cont_fig, "Sin Wave", "blue", s, s_indices)
-        scatter_disc_sig(disc_fig, "Sin Wave", "blue", s, s_indices)
-
-        scatter_cont_sig(cont_fig, "Cos Wave", "red", c, s_indices)
-        scatter_disc_sig(disc_fig, "Cos Wave", "red", c, c_indices)
+        scatter_cont_sig(cont_fig, "Sin Wave", "blue", s)
+        scatter_disc_sig(disc_fig, "Sin Wave", "blue", s)
+        scatter_cont_sig(cont_fig, "Cos Wave", "red", c)
+        scatter_disc_sig(disc_fig, "Cos Wave", "red", c)
 
         st.plotly_chart(disc_fig)
         st.plotly_chart(cont_fig)
