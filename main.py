@@ -181,26 +181,3 @@ if __name__ == "__main__":
             sig = arth_operation[arth_op](sig, _range == "0 , 1")
         if sig:
             Plot_signal(sig)
-
-    # Temporary
-    temp_clicked = st.button("Show Temp", type="primary", disabled=0)
-    if temp_clicked:
-        s = sp.generate_signal(
-            True, False, sp.Signal_type.Time, 3, 720, 360, 1.96349540849362
-        )
-
-        c = sp.generate_signal(
-            False, False, sp.Signal_type.Time, 3, 500, 200, 2.35619449019235
-        )
-
-        # showing sin and cosine signals at the same time
-        cont_fig = go.Figure()
-        disc_fig = go.Figure()
-
-        scatter_cont_sig(cont_fig, "Sin Wave", "blue", s)
-        scatter_disc_sig(disc_fig, "Sin Wave", "blue", s)
-        scatter_cont_sig(cont_fig, "Cos Wave", "red", c)
-        scatter_disc_sig(disc_fig, "Cos Wave", "red", c)
-
-        st.plotly_chart(disc_fig)
-        st.plotly_chart(cont_fig)
