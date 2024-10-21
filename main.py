@@ -118,8 +118,8 @@ arth_operation = {
     # signal , range
     "Normalize": sp.sig_norm,
     # Todo
-    "square": sp.sig_square,
-    "Accumulate": todo,
+    "Square": sp.sig_square,
+    "Accumulate": sp.sig_acc,
     "Shift": todo,
 }
 
@@ -173,12 +173,14 @@ if __name__ == "__main__":
         value = st.number_input("Insert Scalar", format="%f")
         if sig:
             sig = arth_operation[arth_op](sig, value)
-        if sig:
-            Plot_signal(sig)
 
     if arth_op in ["Normalize"]:
         _range = st.radio("Range", ["0 , 1", "-1 , 1"], horizontal=True)
         if sig:
             sig = arth_operation[arth_op](sig, _range == "0 , 1")
+    if arth_op in ["Accumulate", "Square"]:
         if sig:
-            Plot_signal(sig)
+            sig = arth_operation[arth_op](sig)
+
+    if sig:
+        Plot_signal(sig)

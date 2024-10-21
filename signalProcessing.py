@@ -80,6 +80,8 @@ def sig_mul(signal, value) -> Signal:
 
 
 def sig_norm(signal, _range: bool) -> Signal:
+    if not signal:
+        return None
     # _range 0 -> [0,1] , 1 -> [-1,1]
     mx = max(signal.amplitudes)
     mn = min(signal.amplitudes)
@@ -92,4 +94,16 @@ def sig_norm(signal, _range: bool) -> Signal:
 
 
 def sig_square(signal) -> Signal:
-    pass
+    if not signal:
+        return None
+    for i in range(len(signal.amplitudes)):
+        signal.amplitudes[i] *= signal.amplitudes[i]
+    return signal
+
+
+def sig_acc(signal) -> Signal:
+    if not signal:
+        return None
+    for i in range(1, len(signal.amplitudes)):
+        signal.amplitudes[i] += signal.amplitudes[i - 1]
+    return signal
