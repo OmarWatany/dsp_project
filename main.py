@@ -69,21 +69,21 @@ def file_signal(index=-1) -> sp.Signal:
 
 
 def generated_signal(index=0) -> sp.Signal:
-    titles = ["Amp", "Phase shift", "Freq", "Sampling Freq"]
+    titles = ["Wave Type ", "Amp ", "Phase shift ", "Freq ", "Sampling Freq "]
     for i in range(len(titles)):
-        titles[i] = "Insert " + titles[i] + " " + str(index) if index > 0 else ""
+        titles[i] = "Insert " + titles[i] + (str(index) if index > 0 else " ")
 
     sin_flag = (
         st.selectbox(
-            "Chose wave " + str(index) if index > 0 else "",
+            titles[0] + (str(index) if index > 0 else ""),
             ("Sin", "Cos"),
         )
         == "Sin"
     )
-    amp = st.number_input(titles[0], value=1)
-    phase_shift = st.number_input(titles[1], value=0.0, format="%f")
-    freq = st.number_input(titles[2], value=1)
-    samplingFreq = st.number_input(titles[3], value=10)
+    amp = st.number_input(titles[1], value=1)
+    phase_shift = st.number_input(titles[2], value=0.0, format="%f")
+    freq = st.number_input(titles[3], value=1)
+    samplingFreq = st.number_input(titles[4], value=10)
 
     # TODO: Handle Error
     # if samplingFreq < 2 * freq:
@@ -112,10 +112,6 @@ def sig_sub(signal_1, signal_2) -> sp.Signal:
     return signal_1
 
 
-def sig_norm(signal, _range) -> sp.Signal:
-    return signal
-
-
 def sig_mul(signal, value) -> sp.Signal:
     return signal
 
@@ -132,14 +128,17 @@ arth_operation = {
     # signal , value
     "Mul": sig_mul,
     # signal , range
-    "Norm": sig_norm,
+    "Normalize": sp.sig_norm,
     # Todo
-    "Shift": todo,
-    "square": todo,
+    "square": sp.sig_square,
     "Accumulate": todo,
+    "Shift": todo,
 }
 
 if __name__ == "__main__":
+    st.set_page_config(
+        page_title="DSP Framework",
+    )
     st.title("DSP Framework")
 
     # st.write("### Select an option:")
@@ -169,27 +168,31 @@ if __name__ == "__main__":
         # arth_op[arth_op](sig1,sig2)
         st.markdown("Two arguments")
 
+    operation = st.selectbox(
+        "Choose Operation",
+        ("Read from file", "Generate"),
+    )
+
+    sig = (
+        generated_signal()
+        if operation == "Generate"
+        else file_signal()
+        if operation == "Read from file"
+        else None
+    )
     if arth_op in ["Mul"]:
-        operation = st.selectbox(
-            "Choose Operation",
-            ("Read from file", "Generate"),
-        )
-
-        sig = (
-            generated_signal()
-            if operation == "Generate"
-            else file_signal()
-            if operation == "Read from file"
-            else None
-        )
-
         value = st.number_input("Insert Scalar", format="%f")
-        sig = arth_operation[arth_op](sig, value)
+        if sig:
+            sig = arth_operation[arth_op](sig, value)
         if sig:
             Plot_signal(sig)
 
-    if arth_op in ["Norm"]:
-        st.markdown("range")
+    if arth_op in ["Normalize"]:
+        _range = st.radio("Range", ["0 , 1", "-1 , 1"], horizontal=True)
+        if sig:
+            sig = arth_operation[arth_op](sig, _range == "0 , 1")
+        if sig:
+            Plot_signal(sig)
 
     # Temporary
     temp_clicked = st.button("Show Temp", type="primary", disabled=0)

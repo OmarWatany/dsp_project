@@ -65,5 +65,19 @@ def read_file(uploaded_file) -> Signal:
         amplitudes,
         indices,
     )
-    # return amplitudes, indices
 
+
+def sig_norm(signal, _range: bool) -> Signal:
+    # _range 0 -> [0,1] , 1 -> [-1,1]
+    mx = max(signal.amplitudes)
+    mn = min(signal.amplitudes)
+    r = mx - mn
+    if _range:
+        signal.amplitudes = [(i - mn) / r for i in signal.amplitudes]
+    else:
+        signal.amplitudes = [(i - mn) / r * 2 - 1 for i in signal.amplitudes]
+    return signal
+
+
+def sig_square(signal) -> Signal:
+    pass
