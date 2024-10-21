@@ -107,3 +107,20 @@ def sig_acc(signal) -> Signal:
     for i in range(1, len(signal.amplitudes)):
         signal.amplitudes[i] += signal.amplitudes[i - 1]
     return signal
+
+
+def SignalSamplesAreEqual(file, indices, samples):
+    sig = read_file(file)
+    exiected_indices = sig.indices
+    expected_samples = sig.amplitudes
+
+    if len(expected_samples) != len(samples):
+        return (
+            "Test case failed, your signal have different length from the expected one"
+        )
+    for i in range(len(expected_samples)):
+        if abs(samples[i] - expected_samples[i]) < 0.01:
+            continue
+        else:
+            return "Test case failed, your signal have different values from the expected one"
+    return "Test case passed successfully"

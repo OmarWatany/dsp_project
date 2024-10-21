@@ -123,6 +123,7 @@ arth_operation = {
     "Shift": todo,
 }
 
+
 if __name__ == "__main__":
     st.set_page_config(
         page_title="DSP Framework",
@@ -133,6 +134,7 @@ if __name__ == "__main__":
     # arth_op = st.selectbox("Choose Arithmatic arth_op", arth_operation.keys(),label_visibility="hidden")
     arth_op = st.selectbox("Choose Arithmatic Operation", arth_operation.keys())
 
+    sig = None
     # Todo Accept number of signals
     if arth_op in ["Add", "Sub"]:
         signals = []
@@ -184,3 +186,7 @@ if __name__ == "__main__":
 
     if sig:
         Plot_signal(sig)
+
+    test_file = st.file_uploader("Test file", type="txt")
+    if test_file and sig:
+        st.write(sp.SignalSamplesAreEqual(test_file, sig.indices, sig.amplitudes))
