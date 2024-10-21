@@ -156,18 +156,19 @@ if __name__ == "__main__":
         # arth_op[arth_op](sig1,sig2)
         st.markdown("Two arguments")
 
-    operation = st.selectbox(
-        "Choose Operation",
-        ("Read from file", "Generate"),
-    )
+    if arth_op not in ["Add", "Sub"]:
+        operation = st.selectbox(
+            "Choose Operation",
+            ("Read from file", "Generate"),
+        )
+        sig = (
+            generated_signal()
+            if operation == "Generate"
+            else file_signal()
+            if operation == "Read from file"
+            else None
+        )
 
-    sig = (
-        generated_signal()
-        if operation == "Generate"
-        else file_signal()
-        if operation == "Read from file"
-        else None
-    )
     if arth_op in ["Mul"]:
         value = st.number_input("Insert Scalar", format="%f")
         if sig:
