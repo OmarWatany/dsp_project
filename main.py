@@ -104,18 +104,6 @@ def Plot_signal(sig: sp.Signal):
         st.plotly_chart(cont_fig)
 
 
-def sig_add(signal_1, signal_2) -> sp.Signal:
-    return signal_1
-
-
-def sig_sub(signal_1, signal_2) -> sp.Signal:
-    return signal_1
-
-
-def sig_mul(signal, value) -> sp.Signal:
-    return signal
-
-
 def todo(signal):
     return signal
 
@@ -123,10 +111,10 @@ def todo(signal):
 # similar to FOS Commands list
 arth_operation = {
     # two signals
-    "Add": sig_add,
-    "Sub": sig_sub,
+    "Add": sp.sig_add,
+    "Sub": sp.sig_sub,
     # signal , value
-    "Mul": sig_mul,
+    "Mul": sp.sig_mul,
     # signal , range
     "Normalize": sp.sig_norm,
     # Todo

@@ -67,6 +67,18 @@ def read_file(uploaded_file) -> Signal:
     )
 
 
+def sig_add(signal_1, signal_2) -> Signal:
+    return signal_1
+
+
+def sig_sub(signal_1, signal_2) -> Signal:
+    return signal_1
+
+
+def sig_mul(signal, value) -> Signal:
+    return signal
+
+
 def sig_norm(signal, _range: bool) -> Signal:
     # _range 0 -> [0,1] , 1 -> [-1,1]
     mx = max(signal.amplitudes)
