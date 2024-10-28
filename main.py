@@ -144,7 +144,7 @@ if __name__ == "__main__":
             with cols[i]:
                 operation = st.selectbox(
                     f"Choose Operation {i+1}",
-                    ("Generate", "Read from file"),
+                    ("Read from file","Generate"),
                     # ("Read from file", "Generate"),
                 )
                 signals.append(
@@ -154,9 +154,9 @@ if __name__ == "__main__":
                     if operation == "Read from file"
                     else None
                 )
+        if signals[0] and signals[1]:
+            sig = arth_operation[arth_op](signals[0], signals[1])
 
-        # arth_op[arth_op](sig1,sig2)
-        st.markdown("Two arguments")
 
     if arth_op not in ["Add", "Sub"]:
         operation = st.selectbox(
