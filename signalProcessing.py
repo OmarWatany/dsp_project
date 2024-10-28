@@ -1,7 +1,7 @@
 from enum import Enum
 import math
-from signal import signal
 
+# from signal import signal
 from numpy.ma.core import subtract
 
 
@@ -48,7 +48,7 @@ def generate_signal(
     # return s, [i for i in range(0, sampling_freq)]
 
 
-def read_file(uploaded_file) -> Signal:
+def read_file(uploaded_file, bin_flag: bool = 0) -> Signal:
     file_content = uploaded_file.read().decode("utf-8").splitlines()
 
     timeFlag = bool(file_content[0])  # First line
@@ -59,7 +59,7 @@ def read_file(uploaded_file) -> Signal:
     amplitudes = []
     for line in file_content[3 : 3 + nOfSamples]:
         values = line.strip().split(" ")
-        indices.append(int(values[0]))
+        indices.append(int(values[0]) if not bin_flag else values[0])
         amplitudes.append(float(values[1]))
 
     return Signal(
@@ -71,13 +71,19 @@ def read_file(uploaded_file) -> Signal:
 
 
 def sig_sub(signal_1, signal_2) -> Signal:
-
     # Determine the maximum length based on the longest signal
     # Create a list to hold the subtracted amplitudes
 
-    subtracted_amplitudes = [ y- x for x , y in zip(signal_1.amplitudes , signal_2.amplitudes)]
+    subtracted_amplitudes = [
+        y - x for x, y in zip(signal_1.amplitudes, signal_2.amplitudes)
+    ]
 
-    return Signal(False , Signal_type.Time,subtracted_amplitudes,[i for i in range(len(subtracted_amplitudes))])
+    return Signal(
+        False,
+        Signal_type.Time,
+        subtracted_amplitudes,
+        [i for i in range(len(subtracted_amplitudes))],
+    )
 
 
 def sig_add(signal_1, signal_2) -> Signal:
@@ -97,7 +103,12 @@ def sig_add(signal_1, signal_2) -> Signal:
         for i in range(len(signal_2.amplitudes)):
             added_amplitudes[i] += signal_2.amplitudes[i]
 
-    return Signal(False , Signal_type.Time,added_amplitudes,[i for i in range(len(added_amplitudes))])
+    return Signal(
+        False,
+        Signal_type.Time,
+        added_amplitudes,
+        [i for i in range(len(added_amplitudes))],
+    )
 
 
 def sig_mul(signal, value) -> Signal:
@@ -111,7 +122,12 @@ def sig_mul(signal, value) -> Signal:
     for i in range(len(signal.amplitudes)):
         multiplied_amplitudes[i] = signal.amplitudes[i] * value
 
-    return Signal(False , Signal_type.Time,multiplied_amplitudes,[i for i in range(len(multiplied_amplitudes))])
+    return Signal(
+        False,
+        Signal_type.Time,
+        multiplied_amplitudes,
+        [i for i in range(len(multiplied_amplitudes))],
+    )
 
 
 def sig_norm(signal, _range: bool) -> Signal:
@@ -144,33 +160,29 @@ def sig_acc(signal) -> Signal:
     return signal
 
 
-def SignalSamplesAreEqual(file, indices, samples):
-    sig = read_file(file)
-    exiected_indices = sig.indices
-    expected_samples = sig.amplitudes
-
-    if len(expected_samples) != len(samples):
-        return (
-            "Test case failed, your signal have different length from the expected one"
-        )
-    for i in range(len(expected_samples)):
-        if abs(samples[i] - expected_samples[i]) < 0.01:
-            continue
-        else:
-            return "Test case failed, your signal have different values from the expected one"
-    return "Test case passed successfully"
-
-def quantize(noOfLevels, samples):
-    minValue =min(samples)
-    maxValue =max(samples)
-    #width of each quantization interval
+def quantize(signal: Signal = None, noOfLevels=0):
+    minValue = min(signal.amplitudes)
+    maxValue = max(signal.amplitudes)
+    # width of each quantization interval
     delta = (maxValue - minValue) / noOfLevels
     interval_index = []
     quantizedValues = []
     quantizationErrors = []
     encodedLevels = []
 
-    for sample in samples:
-        quantized_level = int((sample - minValue) / delta) #shifting sample down by the minimum value
-        quantized_level = min(quantized_level, noOfLevels - 1)  # Avoid overflow
-        quantized_value = minValue + quantized_level * delta + delta / 2 #reduce quantization error by mapping it to midpoint
+    for sample in signal.amplitudes:
+        quantized_level = min(
+            int((sample - minValue) / delta), noOfLevels - 1
+        )  # Avoid overflow
+        quantized_value = (
+            minValue + quantized_level * delta + delta / 2
+        )  # reduce quantization error by mapping it to midpoint
+
+        interval_index.append(quantized_level + 1)
+        quantizedValues.append(round(quantized_value, 3))
+        quantizationErrors.append(round(quantized_value - sample, 3))
+        encodedLevels.append(
+            f"{quantized_level:0{int(math.ceil(math.log2(noOfLevels)))}b}"
+        )
+
+    return interval_index, encodedLevels, quantizedValues, quantizationErrors

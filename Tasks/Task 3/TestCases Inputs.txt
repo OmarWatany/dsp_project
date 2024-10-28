@@ -1,0 +1,11 @@
+TestCase 1
+Number of bits = 3
+
+Output lists ⇒ encoded and quantized
+
+_____
+
+TestCase 2
+Number of levels = 4
+
+Output lists ⇒ interval index, encoded, quantized and error
