@@ -1,0 +1,13 @@
+type = "sin"
+A=3
+AnalogFrequency=360
+SamplingFrequency=720
+PhaseShift = 1.96349540849362
+
+______________________________________
+
+type = "cos"
+A = 3
+AnalogFrequency = 200
+SamplingFrequency = 500
+PhaseShift = 2.35619449019235
