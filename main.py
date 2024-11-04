@@ -136,8 +136,8 @@ def generated_signal(index=0) -> sp.Signal:
 
 
 def Plot_signal(sig: sp.Signal):
-    clicked = st.button("Show", type="primary")
-    if clicked:
+    # clicked = st.button("Show", type="primary")
+    if sig:
         cont_fig = go.Figure()
         disc_fig = go.Figure()
         scatter_cont_sig(cont_fig, "Signal", "blue", sig)
@@ -150,33 +150,32 @@ def todo(signal):
     return signal
 
 
-# similar to FOS Commands list
-operations = {
-    "Plot": Plot_signal,
-    "Quantize": sp.quantize,
-    "Add": sp.sig_add,
-    "Sub": sp.sig_sub,
-    "Mul": sp.sig_mul,
-    "Normalize": sp.sig_norm,
-    "Square": sp.sig_square,
-    "Accumulate": sp.sig_acc,
-    "Shift": todo,
-}
-
-
-if __name__ == "__main__":
-    st.set_page_config(
-        page_title="DSP Framework",
+def Signal_Source():
+    sig, uploaded_file = None, None
+    operation = st.selectbox(
+        "Choose Source",
+        ("Read from file", "Generate"),
     )
-    st.title("DSP Framework")
+    if operation == "Generate":
+        sig = generated_signal()
+    elif operation == "Read from file":
+        sig, uploaded_file = file_signal()
+    return sig, uploaded_file
 
-    # st.write("### Select an option:")
-    # op = st.selectbox("Choose Arithmatic op", operations.keys(),label_visibility="hidden")
+
+def Arithmatic_Operations():
+    operations = {
+        "Add": sp.sig_add,
+        "Sub": sp.sig_sub,
+        "Mul": sp.sig_mul,
+        "Normalize": sp.sig_norm,
+        "Square": sp.sig_square,
+        "Accumulate": sp.sig_acc,
+        "Shift": todo,
+    }
+
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
-
     sig = None
-    uploaded_file = None
-    # Todo Accept number of signals
     if op in ["Add", "Sub"]:
         signals = []
         cols = st.columns(2)
@@ -199,14 +198,7 @@ if __name__ == "__main__":
             sig = operations[op](signals[0], signals[1])
 
     if op not in ["Add", "Sub"]:
-        operation = st.selectbox(
-            "Choose Operation",
-            ("Read from file", "Generate"),
-        )
-        if operation == "Generate":
-            sig = generated_signal()
-        elif operation == "Read from file":
-            sig, uploaded_file = file_signal()
+        sig, uploaded_file = Signal_Source()
 
     if op in ["Mul"]:
         value = st.number_input("Insert Scalar", format="%f")
@@ -221,52 +213,77 @@ if __name__ == "__main__":
     if op in ["Accumulate", "Square"]:
         if sig:
             sig = operations[op](sig)
+    return sig, None
 
-    # Plotting
-    if sig and op not in "Quantize":
-        Plot_signal(sig)
+
+def quantize_signal():
+    pass
+
+
+# similar to FOS Commands list
+operations = {
+    "Plot": Signal_Source,
+    "Quantize": Signal_Source,
+    "Arithmatic": Arithmatic_Operations,
+}
+
+if __name__ == "__main__":
+    st.set_page_config(page_title="DSP Framework", layout="wide")
+    st.title("DSP Framework")
+
+    main_cols = st.columns(2)
+    with main_cols[0]:
+        # st.markdown("#### Choose operation")
+        op = st.selectbox("**Choose operation type**", operations.keys())
+        sig, uploaded_file = operations[op]()
+    with main_cols[1]:
+        # Plotting
+        if sig and op not in "Quantize":
+            Plot_signal(sig)
 
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
-        quant_type = st.radio("Quantization Type", ["Levels", "Bits"], horizontal=True)
-        no_of_levels = (
-            st.number_input("Number of Levels:", min_value=1, value=2)
-            if quant_type == "Levels"
-            else (1 << st.number_input("Bits:", min_value=1, value=1))
-        )
-
-        # show_interval_index = st.checkbox("Interval Index", value=True)
-        # show_encoded = st.checkbox("Encoded", value=True)
-        # show_quantized = st.checkbox("Quantized", value=True)
-        # show_error = st.checkbox("Error", value=True)
-
-        if sig:
-            interval_index, encoded, quantized, error = operations[op](
-                sig, no_of_levels
+        with main_cols[0]:
+            quant_type = st.radio(
+                "Quantization Type", ["Levels", "Bits"], horizontal=True
             )
-            # Display chosen outputs
-            # if show_interval_index:
-            #     st.write("Interval Index:", interval_index)
-            # if show_encoded:
-            #     st.write("Encoded Signal:", encoded)
-            # if show_quantized:
-            #     st.write("Quantized Signal:", quantized)
-            # if show_error:
-            #     st.write("Quantization Error:", error)
-            draw_quantization(quantized, sig, error, 0)
-
-    test_file = st.file_uploader("Test file", type="txt")
-    if test_file and sig and op != "Quantize":
-        st.write(tst.SignalSamplesAreEqual(test_file, sig.indices, sig.amplitudes))
-
-    if test_file and encoded and quantized:
-        if uploaded_file.name == "Quan1_input.txt":
-            tst.QuantizationTest1(test_file, encoded, quantized)
-        else:
-            tst.QuantizationTest2(
-                f"Tasks/Task 3/{test_file.name}",
-                interval_index,
-                encoded,
-                quantized,
-                error,
+            no_of_levels = (
+                st.number_input("Number of Levels:", min_value=1, value=2)
+                if quant_type == "Levels"
+                else (1 << st.number_input("Bits:", min_value=1, value=1))
             )
+
+            show_data = st.checkbox("Show Data", value=False)
+
+        with main_cols[1]:
+            if sig:
+                interval_index, encoded, quantized, error = sp.quantize(
+                    sig, no_of_levels
+                )
+                # Display chosen outputs
+                if show_data:
+                    cols = st.columns(2)
+                    with cols[0]:
+                        st.write("Interval Index:", interval_index)
+                        st.write("Encoded Signal:", encoded)
+                    with cols[1]:
+                        st.write("Quantized Signal:", quantized)
+                        st.write("Quantization Error:", error)
+                draw_quantization(quantized, sig, error, 0)
+
+    with main_cols[0]:
+        test_file = st.file_uploader("Test file", type="txt")
+        if test_file and sig and op != "Quantize":
+            st.write(tst.SignalSamplesAreEqual(test_file, sig.indices, sig.amplitudes))
+
+        if test_file and encoded and quantized:
+            if uploaded_file.name == "Quan1_input.txt":
+                tst.QuantizationTest1(test_file, encoded, quantized)
+            else:
+                tst.QuantizationTest2(
+                    f"Tasks/Task 3/{test_file.name}",
+                    interval_index,
+                    encoded,
+                    quantized,
+                    error,
+                )
