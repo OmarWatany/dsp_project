@@ -3,7 +3,7 @@ import streamlit as st
 
 
 def SignalSamplesAreEqual(file, indices, samples):
-    sig = sp.read_file(file)
+    sig = sp.read_file(file, 1)
     # exiected_indices = sig.indices
     expected_samples = sig.amplitudes
 

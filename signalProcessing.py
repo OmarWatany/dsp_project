@@ -1,8 +1,6 @@
 from enum import Enum
+import streamlit as st
 import math
-
-# from signal import signal
-from numpy.ma.core import subtract
 
 
 class Signal_type(Enum):
@@ -15,6 +13,7 @@ class Signal:
     signal_type: Signal_type
     amplitudes: []
     indices: []
+    angles: []
 
     def __init__(
         self,
@@ -22,11 +21,13 @@ class Signal:
         signal_type: Signal_type = Signal_type.Time,
         amps=[],
         indices=[],
+        angles=[],
     ):
         self.periodic = periodic
         self.signal_type = signal_type
         self.amplitudes = amps
         self.indices = indices
+        self.angles = angles
 
 
 def generate_signal(
@@ -51,22 +52,27 @@ def generate_signal(
 def read_file(uploaded_file, bin_flag: bool = 0) -> Signal:
     file_content = uploaded_file.read().decode("utf-8").splitlines()
 
-    timeFlag = bool(file_content[0])  # First line
-    periodic = bool(file_content[1])  # Second line
+    periodic = int(file_content[0])  # Second line
+    freqDomain = int(file_content[1])  # First line
     nOfSamples = int(file_content[2])  # Third line
 
     indices = []
     amplitudes = []
     for line in file_content[3 : 3 + nOfSamples]:
         values = line.strip().split(" ")
-        indices.append(int(values[0]) if not bin_flag else values[0])
-        amplitudes.append(float(values[1]))
+        if not freqDomain:
+            indices.append(int(values[0]) if not bin_flag else float(values[0]))
+            amplitudes.append(float(values[1]))
+        else:
+            amplitudes.append(float(values[0]))  # instead of freqs
+            indices.append(float(values[1]))  # angles
 
     return Signal(
         periodic,
-        Signal_type.Time if timeFlag else Signal_type.Freq,
-        amplitudes,
-        indices,
+        Signal_type.Freq if freqDomain else Signal_type.Freq,
+        amps=amplitudes,
+        indices=[i for i in range(nOfSamples)] if freqDomain else indices,
+        angles=indices if freqDomain else [],
     )
 
 
@@ -186,3 +192,54 @@ def quantize(signal: Signal = None, noOfLevels=0):
         )
 
     return interval_index, encodedLevels, quantizedValues, quantizationErrors
+
+
+def fourier_transform(check=0, sig=None, fs=0):
+    N = len(sig.amplitudes)
+
+    # DFT
+    if check == 0:
+        freq = []
+        angle = []
+
+        for k in range(N):
+            real_part = 0
+            imag_part = 0
+            for n in range(N):
+                exponent = (2 * math.pi * k * n) / N
+                real_part += sig.amplitudes[n] * math.cos(exponent)
+                imag_part -= sig.amplitudes[n] * math.sin(exponent)
+
+            freq.append(math.sqrt(real_part**2 + imag_part**2))
+            angle.append(math.atan2(imag_part, real_part))
+        omega = (2 * math.pi) / (N / fs)
+        newIndices = [omega * i for i in range(1, N + 1)]
+        sig.indices = newIndices
+        sig.amplitudes = freq
+        sig.angles = angle
+        return sig
+
+    elif check == 1:
+        amplitudes = []
+        for n in range(N):
+            real_part = 0
+            imag_part = 0
+            for k in range(N):
+                real_amplitude = sig.amplitudes[k] * math.cos(sig.angles[k])
+                imag_amplitude = sig.amplitudes[k] * math.sin(sig.angles[k])
+
+                exponent = (2 * math.pi * k * n) / N
+                real_part += real_amplitude * math.cos(
+                    exponent
+                ) - imag_amplitude * math.sin(exponent)
+                imag_part += real_amplitude * math.sin(
+                    exponent
+                ) + imag_amplitude * math.cos(exponent)
+
+            amplitudes.append(round((real_part + imag_part) / N))
+        # st.write(sig)
+        # st.write(amplitudes)
+        sig.signal_type = Signal_type.Time
+        sig.amplitudes = amplitudes
+        sig.indices = [i for i in range(N)]
+        return sig

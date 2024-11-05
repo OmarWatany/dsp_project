@@ -99,14 +99,14 @@ def draw_quantization(quantized_signal, org_signal: sp.Signal, error, show_error
     st.plotly_chart(fig)
 
 
-def file_signal(index=-1):
+def file_signal(index=-1, f_flag: bool = 0):
     if index > 0:
         title = f"Upload signal {index} txt file"
     else:
         title = "Upload signal txt file"
     uploaded_file = st.file_uploader(title, type="txt", key=index)
     if uploaded_file is not None:
-        return sp.read_file(uploaded_file), uploaded_file
+        return sp.read_file(uploaded_file, f_flag), uploaded_file
     return None, None
 
 
@@ -135,6 +135,19 @@ def generated_signal(index=0) -> sp.Signal:
     )
 
 
+def Signal_Source(f_flag: bool = 0):
+    sig, uploaded_file = None, None
+    operation = st.selectbox(
+        "Choose Source",
+        ("Read from file", "Generate"),
+    )
+    if operation == "Generate":
+        sig = generated_signal()
+    elif operation == "Read from file":
+        sig, uploaded_file = file_signal(f_flag=f_flag)
+    return sig, uploaded_file
+
+
 def Plot_signal(sig: sp.Signal):
     # clicked = st.button("Show", type="primary")
     if sig:
@@ -148,19 +161,6 @@ def Plot_signal(sig: sp.Signal):
 
 def todo(signal):
     return signal
-
-
-def Signal_Source():
-    sig, uploaded_file = None, None
-    operation = st.selectbox(
-        "Choose Source",
-        ("Read from file", "Generate"),
-    )
-    if operation == "Generate":
-        sig = generated_signal()
-    elif operation == "Read from file":
-        sig, uploaded_file = file_signal()
-    return sig, uploaded_file
 
 
 def Arithmatic_Operations():
@@ -216,13 +216,22 @@ def Arithmatic_Operations():
     return sig, None
 
 
-def quantize_signal():
-    pass
+def fourier_transform():
+    sig, uploaded_file = Signal_Source(f_flag=1)
+    func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
+    if func == "DFT" and sig:
+        fs = st.number_input("Sampling Freq (HZ) :", value=1)
+        sig = sp.fourier_transform(0, sig, fs)
+    elif func == "IDFT" and sig:
+        sig = sp.fourier_transform(1, sig)
+
+    return sig, uploaded_file
 
 
 # similar to FOS Commands list
 operations = {
     "Plot": Signal_Source,
+    "Fourier Transform": fourier_transform,
     "Quantize": Signal_Source,
     "Arithmatic": Arithmatic_Operations,
 }
@@ -238,7 +247,9 @@ if __name__ == "__main__":
         sig, uploaded_file = operations[op]()
     with main_cols[1]:
         # Plotting
-        if sig and op not in "Quantize":
+        # if sig and op not in ["Quantize", "Fourier Transform"]:
+        if sig and op not in ["Quantize"]:
+            st.write(sig)
             Plot_signal(sig)
 
     interval_index, encoded, quantized, error = None, None, None, None
