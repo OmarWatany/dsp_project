@@ -1,102 +1,20 @@
 import signalProcessing as sp
 import streamlit as st
-import plotly.graph_objects as go
 import tests as tst
-
-
-def scatter_cont_sig(fig_cont, Title: str, Color: str, Signal: sp.Signal):
-    # Add a continuous line for the signal
-    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
-    fig_cont.add_trace(
-        go.Scatter(
-            x=Signal.indices[:ln],
-            y=Signal.amplitudes[:ln],
-            mode="lines",
-            name=Title,
-            line=dict(color=Color),
-        )
-    )
-
-    fig_cont.update_layout(
-        title="Continuous Wave",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
-
-
-def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal: sp.Signal):
-    # Add a continuous line for the signal
-    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
-    for i in range(ln):
-        fig_disc.add_trace(
-            go.Scatter(
-                x=[Signal.indices[i], Signal.indices[i]],
-                y=[0, Signal.amplitudes[i]],
-                line=dict(color=Color),
-                mode="lines",
-                showlegend=False,
-            )
-        )
-    fig_disc.add_trace(
-        go.Scatter(
-            x=Signal.indices[:ln],
-            y=Signal.amplitudes[:ln],
-            mode="markers",
-            marker=dict(color=Color, size=8),
-            name="Markers",
-            showlegend=False,
-        )
-    )
-
-    fig_disc.update_layout(
-        title="Discreate Wave",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
+import plotly.graph_objects as go
+from plot import *
 
 
 def draw_quantization(quantized_signal, org_signal: sp.Signal, error, show_error):
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=org_signal.indices,
-            y=org_signal.amplitudes,
-            mode="lines",
-            name="Original Signal",
-        )
+    cont_fig = Cont_Fig("Quantized Signal and Quantization Error")
+    cont_fig.scatter(
+        "Original Signal", "blue", org_signal.indices, org_signal.amplitudes
     )
-    fig.add_trace(
-        go.Scatter(
-            x=org_signal.indices,
-            y=quantized_signal,
-            mode="lines",
-            name="Quantized Signal",
-        )
-    )
-
+    cont_fig.scatter("Quantized Signal", "", org_signal.indices, quantized_signal)
     if show_error:
-        fig.add_trace(
-            go.Scatter(
-                x=quantized_signal.indices,
-                y=error,
-                mode="lines",
-                name="Quantization Error",
-            )
-        )
-
-    fig.update_layout(
-        title="Quantized Signal and Quantization Error",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
-
-    st.plotly_chart(fig)
+        cont_fig.scatter("Quantized Error", "red", org_signal.indices, error)
+    cont_fig.update_layout()
+    cont_fig.plot()
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -148,21 +66,6 @@ def Signal_Source(f_flag: bool = 0):
     return sig, uploaded_file
 
 
-def Plot_signal(sig: sp.Signal):
-    # clicked = st.button("Show", type="primary")
-    if sig:
-        cont_fig = go.Figure()
-        disc_fig = go.Figure()
-        scatter_cont_sig(cont_fig, "Signal", "blue", sig)
-        scatter_disc_sig(disc_fig, "Signal", "blue", sig)
-        st.plotly_chart(disc_fig)
-        st.plotly_chart(cont_fig)
-
-
-def todo(signal):
-    return signal
-
-
 def Arithmatic_Operations():
     operations = {
         "Add": sp.sig_add,
@@ -171,7 +74,7 @@ def Arithmatic_Operations():
         "Normalize": sp.sig_norm,
         "Square": sp.sig_square,
         "Accumulate": sp.sig_acc,
-        "Shift": todo,
+        "Shift": "",
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -245,13 +148,16 @@ if __name__ == "__main__":
         # st.markdown("#### Choose operation")
         op = st.selectbox("**Choose operation type**", operations.keys())
         sig, uploaded_file = operations[op]()
+
     with main_cols[1]:
         # Plotting
         # if sig and op not in ["Quantize", "Fourier Transform"]:
         if sig and op not in ["Quantize"]:
-            st.write(sig)
-            Plot_signal(sig)
+            # st.write(sig)
+            plot_signal(sig)
 
+    #
+    #
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
         with main_cols[0]:
@@ -265,6 +171,7 @@ if __name__ == "__main__":
             )
 
             show_data = st.checkbox("Show Data", value=False)
+            show_error = st.checkbox("Show Error", value=False)
 
         with main_cols[1]:
             if sig:
@@ -280,7 +187,7 @@ if __name__ == "__main__":
                     with cols[1]:
                         st.write("Quantized Signal:", quantized)
                         st.write("Quantization Error:", error)
-                draw_quantization(quantized, sig, error, 0)
+                draw_quantization(quantized, sig, error, show_error)
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
