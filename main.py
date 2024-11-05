@@ -1,20 +1,7 @@
-import signalProcessing as sp
 import streamlit as st
+import signalProcessing as sp
 import tests as tst
-import plotly.graph_objects as go
 from plot import *
-
-
-def draw_quantization(quantized_signal, org_signal: sp.Signal, error, show_error):
-    cont_fig = Cont_Fig("Quantized Signal and Quantization Error")
-    cont_fig.scatter(
-        "Original Signal", "blue", org_signal.indices, org_signal.amplitudes
-    )
-    cont_fig.scatter("Quantized Signal", "", org_signal.indices, quantized_signal)
-    if show_error:
-        cont_fig.scatter("Quantized Error", "red", org_signal.indices, error)
-    cont_fig.update_layout()
-    cont_fig.plot()
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -74,7 +61,7 @@ def Arithmatic_Operations():
         "Normalize": sp.sig_norm,
         "Square": sp.sig_square,
         "Accumulate": sp.sig_acc,
-        "Shift": "",
+        "Shift": None,
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -145,19 +132,13 @@ if __name__ == "__main__":
 
     main_cols = st.columns(2)
     with main_cols[0]:
-        # st.markdown("#### Choose operation")
         op = st.selectbox("**Choose operation type**", operations.keys())
         sig, uploaded_file = operations[op]()
 
     with main_cols[1]:
-        # Plotting
-        # if sig and op not in ["Quantize", "Fourier Transform"]:
         if sig and op not in ["Quantize"]:
-            # st.write(sig)
             plot_signal(sig)
 
-    #
-    #
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
         with main_cols[0]:

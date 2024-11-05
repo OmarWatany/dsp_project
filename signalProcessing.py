@@ -52,8 +52,8 @@ def generate_signal(
 def read_file(uploaded_file, bin_flag: bool = 0) -> Signal:
     file_content = uploaded_file.read().decode("utf-8").splitlines()
 
-    periodic = int(file_content[0])  # Second line
-    freqDomain = int(file_content[1])  # First line
+    freqDomain = int(file_content[0])  # First line
+    periodic = int(file_content[1])  # Second line
     nOfSamples = int(file_content[2])  # Third line
 
     indices = []
@@ -136,17 +136,21 @@ def sig_mul(signal, value) -> Signal:
     )
 
 
+def norm(x, mx, mn):
+    r = mx - mn
+    return (x - mn) / r
+
+
 def sig_norm(signal, _range: bool) -> Signal:
     if not signal:
         return None
     # _range 0 -> [0,1] , 1 -> [-1,1]
     mx = max(signal.amplitudes)
     mn = min(signal.amplitudes)
-    r = mx - mn
-    if _range:
-        signal.amplitudes = [(i - mn) / r for i in signal.amplitudes]
-    else:
-        signal.amplitudes = [(i - mn) / r * 2 - 1 for i in signal.amplitudes]
+    signal.amplitudes = [
+        norm(i, mx, mn) * (1 if _range else 2) - (0 if _range else 1)
+        for i in signal.amplitudes
+    ]
     return signal
 
 
@@ -178,7 +182,7 @@ def quantize(signal: Signal = None, noOfLevels=0):
 
     for sample in signal.amplitudes:
         quantized_level = min(
-            int((sample - minValue) / delta), noOfLevels - 1
+            int(norm(sample, maxValue, minValue) * noOfLevels), noOfLevels - 1
         )  # Avoid overflow
         quantized_value = (
             minValue + quantized_level * delta + delta / 2
