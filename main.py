@@ -1,7 +1,7 @@
 import streamlit as st
-import signalProcessing as sp
 import tests as tst
 from plot import *
+from signalProcessing import *
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -11,11 +11,11 @@ def file_signal(index=-1, f_flag: bool = 0):
         title = "Upload signal txt file"
     uploaded_file = st.file_uploader(title, type="txt", key=index)
     if uploaded_file is not None:
-        return sp.read_file(uploaded_file, f_flag), uploaded_file
+        return read_file(uploaded_file, f_flag), uploaded_file
     return None, None
 
 
-def generated_signal(index=0) -> sp.Signal:
+def generated_signal(index=0):
     titles = ["Wave Type ", "Amp ", "Phase shift ", "Freq ", "Sampling Freq "]
     for i in range(len(titles)):
         titles[i] = "Insert " + titles[i] + (str(index) if index > 0 else " ")
@@ -35,8 +35,8 @@ def generated_signal(index=0) -> sp.Signal:
     # TODO: Handle Error
     # if samplingFreq < 2 * freq:
 
-    return sp.generate_signal(
-        sin_flag, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+    return generate_signal(
+        sin_flag, False, Signal_type.TIME, amp, samplingFreq, freq, phase_shift
     )
 
 
@@ -55,12 +55,12 @@ def Signal_Source(f_flag: bool = 0):
 
 def Arithmatic_Operations():
     operations = {
-        "Add": sp.sig_add,
-        "Sub": sp.sig_sub,
-        "Mul": sp.sig_mul,
-        "Normalize": sp.sig_norm,
-        "Square": sp.sig_square,
-        "Accumulate": sp.sig_acc,
+        "Add": sig_add,
+        "Sub": sig_sub,
+        "Mul": sig_mul,
+        "Normalize": sig_norm,
+        "Square": sig_square,
+        "Accumulate": sig_acc,
         "Shift": None,
     }
 
@@ -111,9 +111,9 @@ def fourier_transform():
     func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
     if func == "DFT" and sig:
         fs = st.number_input("Sampling Freq (HZ) :", value=1)
-        sig = sp.fourier_transform(0, sig, fs)
+        sig = fourier_transform_(0, sig, fs)
     elif func == "IDFT" and sig:
-        sig = sp.fourier_transform(1, sig)
+        sig = fourier_transform_(1, sig)
 
     return sig, uploaded_file
 
@@ -156,9 +156,7 @@ if __name__ == "__main__":
 
         with main_cols[1]:
             if sig:
-                interval_index, encoded, quantized, error = sp.quantize(
-                    sig, no_of_levels
-                )
+                interval_index, encoded, quantized, error = quantize(sig, no_of_levels)
                 # Display chosen outputs
                 if show_data:
                     cols = st.columns(2)
@@ -172,8 +170,12 @@ if __name__ == "__main__":
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
-        if test_file and sig and op != "Quantize":
-            st.write(tst.SignalSamplesAreEqual(test_file, sig.indices, sig.amplitudes))
+        if test_file and sig and op not in ["Quantize", "Fourier Transform"]:
+            st.write(
+                tst.SignalSamplesAreEqual(
+                    test_file, signal_idx(sig), signal_samples(sig)
+                )
+            )
 
         if test_file and encoded and quantized:
             if uploaded_file.name == "Quan1_input.txt":

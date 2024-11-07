@@ -1,11 +1,11 @@
 import signalProcessing as sp
 import streamlit as st
+import math
 
 
 def SignalSamplesAreEqual(file, indices, samples):
-    sig = sp.read_file(file, 1)
-    # exiected_indices = sig.indices
-    expected_samples = sig.amplitudes
+    sig: sp.Signal = sp.read_file(file, 0)
+    expected_samples = sp.signal_samples(sig)
 
     if len(expected_samples) != len(samples):
         return (
@@ -19,9 +19,47 @@ def SignalSamplesAreEqual(file, indices, samples):
     return "Test case passed successfully"
 
 
+# Use to test the Amplitude of DFT and IDFT
+def SignalComapreAmplitude(SignalInput=[], SignalOutput=[]):
+    if len(SignalInput) != len(SignalOutput):
+        return False
+    else:
+        for i in range(len(SignalInput)):
+            if abs(SignalInput[i] - SignalOutput[i]) > 0.001:
+                return False
+            elif SignalInput[i] != SignalOutput[i]:
+                return False
+        return True
+
+
+def RoundPhaseShift(P):
+    while P < 0:
+        P += 2 * math.pi
+    return float(P % (2 * math.pi))
+
+
+# Use to test the PhaseShift of DFT
+def SignalComaprePhaseShift(SignalInput=[], SignalOutput=[]):
+    if len(SignalInput) != len(SignalOutput):
+        return False
+    else:
+        for i in range(len(SignalInput)):
+            A = round(SignalInput[i])
+            B = round(SignalOutput[i])
+            if abs(A - B) > 0.0001:
+                return False
+            elif A != B:
+                return False
+        return True
+
+
 def QuantizationTest1(compareFile, Your_EncodedValues, Your_QuantizedValues):
     sig = sp.read_file(compareFile, 1)
-    expectedEncodedValues, expectedQuantizedValues = sig.indices, sig.amplitudes
+    expectedEncodedValues, expectedQuantizedValues = (
+        sp.signal_idx(sig),
+        sp.signal_samples(sig),
+    )
+
     if (len(Your_EncodedValues) != len(expectedEncodedValues)) or (
         len(Your_QuantizedValues) != len(expectedQuantizedValues)
     ):
