@@ -1,102 +1,7 @@
-import signalProcessing as sp
 import streamlit as st
-import plotly.graph_objects as go
 import tests as tst
-
-
-def scatter_cont_sig(fig_cont, Title: str, Color: str, Signal: sp.Signal):
-    # Add a continuous line for the signal
-    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
-    fig_cont.add_trace(
-        go.Scatter(
-            x=Signal.indices[:ln],
-            y=Signal.amplitudes[:ln],
-            mode="lines",
-            name=Title,
-            line=dict(color=Color),
-        )
-    )
-
-    fig_cont.update_layout(
-        title="Continuous Wave",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
-
-
-def scatter_disc_sig(fig_disc, Title: str, Color: str, Signal: sp.Signal):
-    # Add a continuous line for the signal
-    ln = 50 if len(Signal.indices) > 50 else len(Signal.indices)
-    for i in range(ln):
-        fig_disc.add_trace(
-            go.Scatter(
-                x=[Signal.indices[i], Signal.indices[i]],
-                y=[0, Signal.amplitudes[i]],
-                line=dict(color=Color),
-                mode="lines",
-                showlegend=False,
-            )
-        )
-    fig_disc.add_trace(
-        go.Scatter(
-            x=Signal.indices[:ln],
-            y=Signal.amplitudes[:ln],
-            mode="markers",
-            marker=dict(color=Color, size=8),
-            name="Markers",
-            showlegend=False,
-        )
-    )
-
-    fig_disc.update_layout(
-        title="Discreate Wave",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
-
-
-def draw_quantization(quantized_signal, org_signal: sp.Signal, error, show_error):
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=org_signal.indices,
-            y=org_signal.amplitudes,
-            mode="lines",
-            name="Original Signal",
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=org_signal.indices,
-            y=quantized_signal,
-            mode="lines",
-            name="Quantized Signal",
-        )
-    )
-
-    if show_error:
-        fig.add_trace(
-            go.Scatter(
-                x=quantized_signal.indices,
-                y=error,
-                mode="lines",
-                name="Quantization Error",
-            )
-        )
-
-    fig.update_layout(
-        title="Quantized Signal and Quantization Error",
-        xaxis_title="Index",
-        yaxis_title="Amplitude",
-        width=1000,
-        height=500,
-    )
-
-    st.plotly_chart(fig)
+from plot import *
+from signalProcessing import *
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -106,11 +11,11 @@ def file_signal(index=-1, f_flag: bool = 0):
         title = "Upload signal txt file"
     uploaded_file = st.file_uploader(title, type="txt", key=index)
     if uploaded_file is not None:
-        return sp.read_file(uploaded_file, f_flag), uploaded_file
+        return read_file(uploaded_file, f_flag), uploaded_file
     return None, None
 
 
-def generated_signal(index=0) -> sp.Signal:
+def generated_signal(index=0):
     titles = ["Wave Type ", "Amp ", "Phase shift ", "Freq ", "Sampling Freq "]
     for i in range(len(titles)):
         titles[i] = "Insert " + titles[i] + (str(index) if index > 0 else " ")
@@ -130,8 +35,8 @@ def generated_signal(index=0) -> sp.Signal:
     # TODO: Handle Error
     # if samplingFreq < 2 * freq:
 
-    return sp.generate_signal(
-        sin_flag, False, sp.Signal_type.Time, amp, samplingFreq, freq, phase_shift
+    return generate_signal(
+        sin_flag, False, Signal_type.TIME, amp, samplingFreq, freq, phase_shift
     )
 
 
@@ -148,30 +53,15 @@ def Signal_Source(f_flag: bool = 0):
     return sig, uploaded_file
 
 
-def Plot_signal(sig: sp.Signal):
-    # clicked = st.button("Show", type="primary")
-    if sig:
-        cont_fig = go.Figure()
-        disc_fig = go.Figure()
-        scatter_cont_sig(cont_fig, "Signal", "blue", sig)
-        scatter_disc_sig(disc_fig, "Signal", "blue", sig)
-        st.plotly_chart(disc_fig)
-        st.plotly_chart(cont_fig)
-
-
-def todo(signal):
-    return signal
-
-
 def Arithmatic_Operations():
     operations = {
-        "Add": sp.sig_add,
-        "Sub": sp.sig_sub,
-        "Mul": sp.sig_mul,
-        "Normalize": sp.sig_norm,
-        "Square": sp.sig_square,
-        "Accumulate": sp.sig_acc,
-        "Shift": todo,
+        "Add": sig_add,
+        "Sub": sig_sub,
+        "Mul": sig_mul,
+        "Normalize": sig_norm,
+        "Square": sig_square,
+        "Accumulate": sig_acc,
+        "Shift": None,
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -221,9 +111,9 @@ def fourier_transform():
     func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
     if func == "DFT" and sig:
         fs = st.number_input("Sampling Freq (HZ) :", value=1)
-        sig = sp.fourier_transform(0, sig, fs)
+        sig = fourier_transform_(0, sig, fs)
     elif func == "IDFT" and sig:
-        sig = sp.fourier_transform(1, sig)
+        sig = fourier_transform_(1, sig)
 
     return sig, uploaded_file
 
@@ -242,15 +132,12 @@ if __name__ == "__main__":
 
     main_cols = st.columns(2)
     with main_cols[0]:
-        # st.markdown("#### Choose operation")
         op = st.selectbox("**Choose operation type**", operations.keys())
         sig, uploaded_file = operations[op]()
+
     with main_cols[1]:
-        # Plotting
-        # if sig and op not in ["Quantize", "Fourier Transform"]:
         if sig and op not in ["Quantize"]:
-            st.write(sig)
-            Plot_signal(sig)
+            plot_signal(sig)
 
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
@@ -265,12 +152,11 @@ if __name__ == "__main__":
             )
 
             show_data = st.checkbox("Show Data", value=False)
+            show_error = st.checkbox("Show Error", value=False)
 
         with main_cols[1]:
             if sig:
-                interval_index, encoded, quantized, error = sp.quantize(
-                    sig, no_of_levels
-                )
+                interval_index, encoded, quantized, error = quantize(sig, no_of_levels)
                 # Display chosen outputs
                 if show_data:
                     cols = st.columns(2)
@@ -280,12 +166,16 @@ if __name__ == "__main__":
                     with cols[1]:
                         st.write("Quantized Signal:", quantized)
                         st.write("Quantization Error:", error)
-                draw_quantization(quantized, sig, error, 0)
+                draw_quantization(quantized, sig, error, show_error)
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
-        if test_file and sig and op != "Quantize":
-            st.write(tst.SignalSamplesAreEqual(test_file, sig.indices, sig.amplitudes))
+        if test_file and sig and op not in ["Quantize", "Fourier Transform"]:
+            st.write(
+                tst.SignalSamplesAreEqual(
+                    test_file, signal_idx(sig), signal_samples(sig)
+                )
+            )
 
         if test_file and encoded and quantized:
             if uploaded_file.name == "Quan1_input.txt":

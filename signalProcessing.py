@@ -1,39 +1,43 @@
+from typing import NewType
 from enum import Enum
 import streamlit as st
 import math
 
+Signal: NewType = NewType("Signal", dict)
+
 
 class Signal_type(Enum):
-    Time = 0
-    Freq = 1
+    TIME = 0
+    FREQ = 1
 
 
-class Signal:
-    periodic: bool
-    signal_type: Signal_type
-    amplitudes: []
-    indices: []
-    angles: []
+def signal(
+    periodic=0, sig_type=Signal_type.TIME, indices=None, samples=None, phase_shifts=None
+) -> Signal:
+    d = {
+        "periodic": periodic,
+        "signal_type": sig_type,
+    }
+    for i in range(len(indices)):
+        d[indices[i]] = [samples[i], phase_shifts[i] if phase_shifts else 0]
+    return d
 
-    def __init__(
-        self,
-        periodic: bool = False,
-        signal_type: Signal_type = Signal_type.Time,
-        amps=[],
-        indices=[],
-        angles=[],
-    ):
-        self.periodic = periodic
-        self.signal_type = signal_type
-        self.amplitudes = amps
-        self.indices = indices
-        self.angles = angles
+
+def signal_idx(sig: Signal):
+    return [i for i in sig.keys() if isinstance(i, int | float)]
+
+
+def signal_samples(sig: Signal):
+    return [sig[i][0] for i in sig.keys() if isinstance(i, int | float)]
+
+
+def signal_phase_shifts(sig: Signal):
+    return [sig[i][1] for i in sig.keys() if isinstance(i, int | float)]
 
 
 def generate_signal(
     sin_flag: bool,
     periodic: bool,
-    signal_type: Signal_type,
     amp,
     sampling_freq,
     analog_freq,
@@ -41,134 +45,139 @@ def generate_signal(
 ) -> Signal:
     # TODO: Handle Division by 0
     w = 2 * math.pi * (analog_freq / sampling_freq)
-    if sin_flag:
-        s = [amp * math.sin(w * i + phase_shift) for i in range(0, sampling_freq)]
-    else:
-        s = [amp * math.cos(w * i + phase_shift) for i in range(0, sampling_freq)]
-    return Signal(periodic, signal_type, s, [i for i in range(0, sampling_freq)])
-    # return s, [i for i in range(0, sampling_freq)]
+
+    def ang(i):
+        w * i + phase_shift
+
+    s = [
+        amp * math.sin(ang(i)) if sin_flag else math.cos(ang(i))
+        for i in range(0, sampling_freq)
+    ]
+
+    return signal(periodic, Signal_type.TIME, [i for i in range(sampling_freq)], s)
 
 
 def read_file(uploaded_file, bin_flag: bool = 0) -> Signal:
     file_content = uploaded_file.read().decode("utf-8").splitlines()
 
-    periodic = int(file_content[0])  # Second line
-    freqDomain = int(file_content[1])  # First line
+    freqDomain = int(file_content[0])  # First line
+    periodic = int(file_content[1])  # Second line
     nOfSamples = int(file_content[2])  # Third line
 
-    indices = []
-    amplitudes = []
+    x = []
+    y = []
     for line in file_content[3 : 3 + nOfSamples]:
         values = line.strip().split(" ")
-        if not freqDomain:
-            indices.append(int(values[0]) if not bin_flag else float(values[0]))
-            amplitudes.append(float(values[1]))
+        if freqDomain:
+            x.append(float(values[0]))  # instead of freqs
+            y.append(float(values[1]))  # angles
         else:
-            amplitudes.append(float(values[0]))  # instead of freqs
-            indices.append(float(values[1]))  # angles
+            x.append(int(values[0]) if not bin_flag else float(values[0]))
+            y.append(float(values[1]))
 
-    return Signal(
+    return signal(
         periodic,
-        Signal_type.Freq if freqDomain else Signal_type.Freq,
-        amps=amplitudes,
-        indices=[i for i in range(nOfSamples)] if freqDomain else indices,
-        angles=indices if freqDomain else [],
+        sig_type=Signal_type.FREQ if freqDomain else Signal_type.TIME,
+        indices=[i for i in range(len(x))] if freqDomain else x,
+        samples=x if freqDomain else y,
+        phase_shifts=y if freqDomain else None,
     )
 
 
-def sig_sub(signal_1, signal_2) -> Signal:
-    # Determine the maximum length based on the longest signal
-    # Create a list to hold the subtracted amplitudes
+def sig_add_sub(add_f: bool, sig1: Signal, sig2: Signal):
+    indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
 
-    subtracted_amplitudes = [
-        y - x for x, y in zip(signal_1.amplitudes, signal_2.amplitudes)
-    ]
+    newIndices = sorted(set(indices_1 + indices_2))
+    new_sig: dict = {}
 
-    return Signal(
+    # for each index as key do operation on value if exist or with 0
+    if add_f:
+        for i in newIndices:
+            new_sig[i] = sig1.get(i, [0])[0] + sig2.get(i, [0])[0]
+    else:
+        for i in newIndices:
+            new_sig[i] = sig2.get(i, [0])[0] - sig1.get(i, [0])[0]
+
+    return signal(
         False,
-        Signal_type.Time,
-        subtracted_amplitudes,
-        [i for i in range(len(subtracted_amplitudes))],
+        Signal_type.TIME,
+        indices=list(new_sig.keys()),
+        samples=list(new_sig.values()),
     )
 
 
-def sig_add(signal_1, signal_2) -> Signal:
+def sig_sub(signal_1: Signal, signal_2: Signal):
+    return sig_add_sub(
+        0,
+        signal_1,
+        signal_2,
+    )
+
+
+def sig_add(signal_1: Signal, signal_2: Signal):
     # Determine the maximum length based on the longest signal
-    max_length = max(signal_1.indices[-1], signal_2.indices[-1]) + 1
-
-    # Create a list to hold the summed amplitudes
-    added_amplitudes = [0 for i in range(max_length)]
-
-    # Add amplitudes from signal_1
-    if signal_1:
-        for i in range(len(signal_1.amplitudes)):
-            added_amplitudes[i] += signal_1.amplitudes[i]
-
-    # Add amplitudes from signal_2
-    if signal_2:
-        for i in range(len(signal_2.amplitudes)):
-            added_amplitudes[i] += signal_2.amplitudes[i]
-
-    return Signal(
-        False,
-        Signal_type.Time,
-        added_amplitudes,
-        [i for i in range(len(added_amplitudes))],
+    return sig_add_sub(
+        1,
+        signal_1,
+        signal_2,
     )
 
 
-def sig_mul(signal, value) -> Signal:
+def sig_mul(signal: Signal, value):
     if signal is None:
         return None
 
-    # Initialize the multiplied amplitudes list
-    multiplied_amplitudes = [0 for i in range(len(signal.amplitudes))]
-
     # Multiply each amplitude by the given value
-    for i in range(len(signal.amplitudes)):
-        multiplied_amplitudes[i] = signal.amplitudes[i] * value
+    for i in signal_idx(signal):
+        signal[i][0] *= value
 
-    return Signal(
-        False,
-        Signal_type.Time,
-        multiplied_amplitudes,
-        [i for i in range(len(multiplied_amplitudes))],
-    )
+    return signal
 
 
-def sig_norm(signal, _range: bool) -> Signal:
+def norm(x, mx, mn):
+    r = mx - mn
+    return (x - mn) / r
+
+
+def sig_norm(signal: Signal, _range: bool):
     if not signal:
         return None
     # _range 0 -> [0,1] , 1 -> [-1,1]
-    mx = max(signal.amplitudes)
-    mn = min(signal.amplitudes)
-    r = mx - mn
-    if _range:
-        signal.amplitudes = [(i - mn) / r for i in signal.amplitudes]
-    else:
-        signal.amplitudes = [(i - mn) / r * 2 - 1 for i in signal.amplitudes]
+    samples = signal_samples(signal)
+    mx = max(samples)
+    mn = min(samples)
+    for i in signal_idx(signal):
+        signal[i][0] = norm(signal[i][0], mx, mn) * (1 if _range else 2) - (
+            0 if _range else 1
+        )
+
     return signal
 
 
-def sig_square(signal) -> Signal:
+def sig_square(signal: Signal):
     if not signal:
         return None
-    for i in range(len(signal.amplitudes)):
-        signal.amplitudes[i] *= signal.amplitudes[i]
+    indices = signal_idx(signal)
+    for i in indices:
+        signal[i][0] *= signal[i][0]
     return signal
 
 
-def sig_acc(signal) -> Signal:
+def sig_acc(signal: Signal):
     if not signal:
         return None
-    for i in range(1, len(signal.amplitudes)):
-        signal.amplitudes[i] += signal.amplitudes[i - 1]
+    indices = signal_idx(signal)
+    for i in range(1, len(indices)):
+        signal[indices[i]][0] += signal[indices[i - 1]][0]
     return signal
 
 
 def quantize(signal: Signal = None, noOfLevels=0):
-    minValue = min(signal.amplitudes)
-    maxValue = max(signal.amplitudes)
+    samples = signal_samples(signal)
+    indices = signal_idx(signal)
+
+    minValue = min(samples)
+    maxValue = max(samples)
     # width of each quantization interval
     delta = (maxValue - minValue) / noOfLevels
     interval_index = []
@@ -176,9 +185,9 @@ def quantize(signal: Signal = None, noOfLevels=0):
     quantizationErrors = []
     encodedLevels = []
 
-    for sample in signal.amplitudes:
+    for sample in samples:
         quantized_level = min(
-            int((sample - minValue) / delta), noOfLevels - 1
+            int(norm(sample, maxValue, minValue) * noOfLevels), noOfLevels - 1
         )  # Avoid overflow
         quantized_value = (
             minValue + quantized_level * delta + delta / 2
@@ -194,11 +203,14 @@ def quantize(signal: Signal = None, noOfLevels=0):
     return interval_index, encodedLevels, quantizedValues, quantizationErrors
 
 
-def fourier_transform(check=0, sig=None, fs=0):
-    N = len(sig.amplitudes)
+def fourier_transform_(check=0, sig: Signal = None, fs=0):
+    idx = signal_idx(sig)
+
+    N = len(idx)
 
     # DFT
     if check == 0:
+        samples = signal_samples(sig)
         freq = []
         angle = []
 
@@ -207,26 +219,32 @@ def fourier_transform(check=0, sig=None, fs=0):
             imag_part = 0
             for n in range(N):
                 exponent = (2 * math.pi * k * n) / N
-                real_part += sig.amplitudes[n] * math.cos(exponent)
-                imag_part -= sig.amplitudes[n] * math.sin(exponent)
+                real_part += samples[n] * math.cos(exponent)
+                imag_part -= samples[n] * math.sin(exponent)
 
             freq.append(math.sqrt(real_part**2 + imag_part**2))
             angle.append(math.atan2(imag_part, real_part))
         omega = (2 * math.pi) / (N / fs)
         newIndices = [omega * i for i in range(1, N + 1)]
-        sig.indices = newIndices
-        sig.amplitudes = freq
-        sig.angles = angle
-        return sig
+
+        return signal(
+            sig["periodic"],
+            sig_type=Signal_type.FREQ,
+            indices=newIndices,
+            samples=freq,
+            phase_shifts=angle,
+        )
 
     elif check == 1:
-        amplitudes = []
+        freq = signal_samples(sig)
+        pha = signal_phase_shifts(sig)
+        y = []
         for n in range(N):
             real_part = 0
             imag_part = 0
             for k in range(N):
-                real_amplitude = sig.amplitudes[k] * math.cos(sig.angles[k])
-                imag_amplitude = sig.amplitudes[k] * math.sin(sig.angles[k])
+                real_amplitude = freq[k] * math.cos(pha[k])
+                imag_amplitude = freq[k] * math.sin(pha[k])
 
                 exponent = (2 * math.pi * k * n) / N
                 real_part += real_amplitude * math.cos(
@@ -236,10 +254,11 @@ def fourier_transform(check=0, sig=None, fs=0):
                     exponent
                 ) + imag_amplitude * math.cos(exponent)
 
-            amplitudes.append(round((real_part + imag_part) / N))
-        # st.write(sig)
-        # st.write(amplitudes)
-        sig.signal_type = Signal_type.Time
-        sig.amplitudes = amplitudes
-        sig.indices = [i for i in range(N)]
-        return sig
+            y.append(round((real_part + imag_part) / N))
+
+        return signal(
+            sig["periodic"],
+            sig_type=Signal_type.TIME,
+            indices=[i for i in range(N)],
+            samples=y,
+        )
