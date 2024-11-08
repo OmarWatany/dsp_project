@@ -47,7 +47,7 @@ def generate_signal(
     w = 2 * math.pi * (analog_freq / sampling_freq)
 
     def ang(i):
-        w * i + phase_shift
+        return w * i + phase_shift
 
     s = [
         amp * math.sin(ang(i)) if sin_flag else math.cos(ang(i))
@@ -172,9 +172,20 @@ def sig_acc(signal: Signal):
     return signal
 
 
+def sig_shift(sig: Signal, steps: int, right_dir: bool = 1):
+    steps = steps if right_dir else -steps
+    return signal(
+        periodic=sig["periodic"],
+        sig_type=sig["signal_type"],
+        indices=[i + steps for i in signal_idx(sig)],
+        samples=signal_samples(sig),
+        phase_shifts=signal_phase_shifts(sig),
+    )
+
+
 def quantize(signal: Signal = None, noOfLevels=0):
     samples = signal_samples(signal)
-    indices = signal_idx(signal)
+    # indices = signal_idx(signal)
 
     minValue = min(samples)
     maxValue = max(samples)
@@ -203,7 +214,7 @@ def quantize(signal: Signal = None, noOfLevels=0):
     return interval_index, encodedLevels, quantizedValues, quantizationErrors
 
 
-def fourier_transform_(check=0, sig: Signal = None, fs=0):
+def fourier_transform(check=0, sig: Signal = None, fs=0):
     idx = signal_idx(sig)
 
     N = len(idx)

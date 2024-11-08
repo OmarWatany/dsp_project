@@ -1,7 +1,7 @@
 import streamlit as st
 import tests as tst
-from plot import *
-from signalProcessing import *
+import signalProcessing as sp
+import plot as plt
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -11,7 +11,7 @@ def file_signal(index=-1, f_flag: bool = 0):
         title = "Upload signal txt file"
     uploaded_file = st.file_uploader(title, type="txt", key=index)
     if uploaded_file is not None:
-        return read_file(uploaded_file, f_flag), uploaded_file
+        return sp.read_file(uploaded_file, f_flag), uploaded_file
     return None, None
 
 
@@ -22,7 +22,7 @@ def generated_signal(index=0):
 
     sin_flag = (
         st.selectbox(
-            titles[0] + (str(index) if index > 0 else ""),
+            titles[0],
             ("Sin", "Cos"),
         )
         == "Sin"
@@ -35,33 +35,31 @@ def generated_signal(index=0):
     # TODO: Handle Error
     # if samplingFreq < 2 * freq:
 
-    return generate_signal(
-        sin_flag, False, Signal_type.TIME, amp, samplingFreq, freq, phase_shift
-    )
+    return sp.generate_signal(sin_flag, False, amp, samplingFreq, freq, phase_shift)
 
 
-def Signal_Source(f_flag: bool = 0):
+def Signal_Source(f_flag: bool = 0, idx: int = -1):
     sig, uploaded_file = None, None
     operation = st.selectbox(
-        "Choose Source",
+        f"Choose Source {idx+1 if idx >= 0 else ''}",
         ("Read from file", "Generate"),
     )
     if operation == "Generate":
-        sig = generated_signal()
+        sig = generated_signal(idx + 1)
     elif operation == "Read from file":
-        sig, uploaded_file = file_signal(f_flag=f_flag)
+        sig, uploaded_file = file_signal(idx + 1, f_flag=f_flag)
     return sig, uploaded_file
 
 
 def Arithmatic_Operations():
     operations = {
-        "Add": sig_add,
-        "Sub": sig_sub,
-        "Mul": sig_mul,
-        "Normalize": sig_norm,
-        "Square": sig_square,
-        "Accumulate": sig_acc,
-        "Shift": None,
+        "Add": sp.sig_add,
+        "Sub": sp.sig_sub,
+        "Mul": sp.sig_mul,
+        "Normalize": sp.sig_norm,
+        "Square": sp.sig_square,
+        "Accumulate": sp.sig_acc,
+        "Shift": sp.sig_shift,
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -69,40 +67,37 @@ def Arithmatic_Operations():
     if op in ["Add", "Sub"]:
         signals = []
         cols = st.columns(2)
-        # for col in cols:
         for i in range(len(cols)):
             with cols[i]:
-                operation = st.selectbox(
-                    f"Choose Operation {i+1}",
-                    ("Read from file", "Generate"),
-                    # ("Read from file", "Generate"),
-                )
-                signal = None
-                if operation == "Generate":
-                    signal = generated_signal(i)
-                elif operation == "Read from file":
-                    signal, uploaded_file = file_signal(i)
+                signal, up_file = Signal_Source(idx=i)
                 signals.append(signal)
 
         if signals[0] and signals[1]:
             sig = operations[op](signals[0], signals[1])
 
-    if op not in ["Add", "Sub"]:
+    else:
         sig, uploaded_file = Signal_Source()
 
-    if op in ["Mul"]:
+    if op == "Mul":
         value = st.number_input("Insert Scalar", format="%f")
         if sig:
             sig = operations[op](sig, value)
 
-    if op in ["Normalize"]:
+    elif op == "Normalize":
         _range = st.radio("Range", ["0 , 1", "-1 , 1"], horizontal=True)
         if sig:
             sig = operations[op](sig, _range == "0 , 1")
 
-    if op in ["Accumulate", "Square"]:
+    elif op == "Shift":
+        steps = st.number_input("Steps ", value=0)
+        dir = st.radio("Direction", ["Right", "Left"], horizontal=True)
+        if sig:
+            sig = operations[op](sig, steps, dir == "Right")
+
+    elif op in ["Accumulate", "Square"]:
         if sig:
             sig = operations[op](sig)
+
     return sig, None
 
 
@@ -111,9 +106,9 @@ def fourier_transform():
     func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
     if func == "DFT" and sig:
         fs = st.number_input("Sampling Freq (HZ) :", value=1)
-        sig = fourier_transform_(0, sig, fs)
+        sig = sp.fourier_transform(0, sig, fs)
     elif func == "IDFT" and sig:
-        sig = fourier_transform_(1, sig)
+        sig = sp.fourier_transform(1, sig)
 
     return sig, uploaded_file
 
@@ -137,7 +132,7 @@ if __name__ == "__main__":
 
     with main_cols[1]:
         if sig and op not in ["Quantize"]:
-            plot_signal(sig)
+            plt.plot_signal(sig)
 
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
@@ -156,7 +151,9 @@ if __name__ == "__main__":
 
         with main_cols[1]:
             if sig:
-                interval_index, encoded, quantized, error = quantize(sig, no_of_levels)
+                interval_index, encoded, quantized, error = sp.quantize(
+                    sig, no_of_levels
+                )
                 # Display chosen outputs
                 if show_data:
                     cols = st.columns(2)
@@ -166,14 +163,14 @@ if __name__ == "__main__":
                     with cols[1]:
                         st.write("Quantized Signal:", quantized)
                         st.write("Quantization Error:", error)
-                draw_quantization(quantized, sig, error, show_error)
+                sp.draw_quantization(quantized, sig, error, show_error)
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
         if test_file and sig and op not in ["Quantize", "Fourier Transform"]:
             st.write(
                 tst.SignalSamplesAreEqual(
-                    test_file, signal_idx(sig), signal_samples(sig)
+                    test_file, sp.signal_idx(sig), sp.signal_samples(sig)
                 )
             )
 
