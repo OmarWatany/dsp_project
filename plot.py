@@ -92,22 +92,17 @@ def plot_time_signal(sig, nPts: int = 50):
     cont_fig.scatter("signal", "blue", idx, s)
     cont_fig.update_layout()
     cont_fig.plot()
-    disc_fig = Disc_Fig("Discreate", nPts)
+    disc_fig = Disc_Fig("Discrete", nPts)
     disc_fig.scatter("signal", "red", idx, s)
     disc_fig.update_layout()
     disc_fig.plot()
 
 
 def plot_signal(sig):
-    cols = st.columns([0.1, 0.9])
     max = False
     nPts = 50
-    with cols[0]:
-        max = st.checkbox("MAX", value=False)
-    with cols[1]:
-        nPts = st.number_input(
-            "Number pointes to plot:", disabled=max, min_value=1, value=50
-        )
+    nPts = st.number_input("Number of pointes to plot:", min_value=1, value=50)
+    max = st.checkbox("MAX", value=False)
     plot_func = {
         sp.Signal_type.TIME: plot_time_signal,
         sp.Signal_type.FREQ: plot_freq_signal,
