@@ -4,6 +4,13 @@ import streamlit as st
 import math
 
 Signal: NewType = NewType("Signal", dict)
+# layout
+# {
+#   "periodic": periodic,
+#   "signal_type": sig_type,
+#   idx: [sample,phase_shift]
+#   ...
+# }
 
 
 class Signal_type(Enum):
@@ -50,7 +57,7 @@ def generate_signal(
         return w * i + phase_shift
 
     s = [
-        amp * math.sin(ang(i)) if sin_flag else math.cos(ang(i))
+        amp * (math.sin(ang(i)) if sin_flag else math.cos(ang(i)))
         for i in range(0, sampling_freq)
     ]
 
@@ -93,6 +100,7 @@ def sig_add_sub(add_f: bool, sig1: Signal, sig2: Signal):
     # for each index as key do operation on value if exist or with 0
     if add_f:
         for i in newIndices:
+            # sig 1 get indix i [0](samlple) of [0] if i not found so sample = 0
             new_sig[i] = sig1.get(i, [0])[0] + sig2.get(i, [0])[0]
     else:
         for i in newIndices:
@@ -183,6 +191,16 @@ def sig_shift(sig: Signal, steps: int, right_dir: bool = 1):
     )
 
 
+def sig_fold(sig: Signal) -> Signal:
+    return signal(
+        periodic=sig["periodic"],
+        sig_type=sig["signal_type"],
+        indices=[-i for i in signal_idx(sig)],
+        samples=signal_samples(sig),
+        phase_shifts=signal_phase_shifts(sig),
+    )
+
+
 def quantize(signal: Signal = None, noOfLevels=0):
     samples = signal_samples(signal)
     # indices = signal_idx(signal)
@@ -257,13 +275,13 @@ def fourier_transform(check=0, sig: Signal = None, fs=0):
                 real_amplitude = freq[k] * math.cos(pha[k])
                 imag_amplitude = freq[k] * math.sin(pha[k])
 
-                exponent = (2 * math.pi * k * n) / N
-                real_part += real_amplitude * math.cos(
-                    exponent
-                ) - imag_amplitude * math.sin(exponent)
-                imag_part += real_amplitude * math.sin(
-                    exponent
-                ) + imag_amplitude * math.cos(exponent)
+                exp = (2 * math.pi * k * n) / N
+                real_part += real_amplitude * math.cos(exp) - imag_amplitude * math.sin(
+                    exp
+                )
+                imag_part += real_amplitude * math.sin(exp) + imag_amplitude * math.cos(
+                    exp
+                )
 
             y.append(round((real_part + imag_part) / N))
 
@@ -273,3 +291,22 @@ def fourier_transform(check=0, sig: Signal = None, fs=0):
             indices=[i for i in range(N)],
             samples=y,
         )
+
+
+def sig_dst(sig: Signal):
+    indices = signal_idx(sig)
+    N = len(indices)
+    xk = [0 for i in range(N)]
+
+    for k in range(N):
+        for n in range(1, N + 1):
+            xk[k] += sig.get(n, [0])[0] * math.cos(
+                4 / (math.pi * N) * (2 * n - 1) * (2 * k - 1)
+            )
+        xk[k] *= math.sqrt(2 / N)
+    return signal(
+        sig["periodic"],
+        sig_type=Signal_type.TIME,
+        indices=[i for i in range(N)],
+        samples=xk,
+    )

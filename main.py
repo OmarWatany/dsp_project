@@ -10,7 +10,7 @@ def file_signal(index=-1, f_flag: bool = 0):
     else:
         title = "Upload signal txt file"
     uploaded_file = st.file_uploader(title, type="txt", key=index)
-    if uploaded_file is not None:
+    if uploaded_file:
         return sp.read_file(uploaded_file, f_flag), uploaded_file
     return None, None
 
@@ -60,6 +60,7 @@ def Arithmatic_Operations():
         "Square": sp.sig_square,
         "Accumulate": sp.sig_acc,
         "Shift": sp.sig_shift,
+        "Fold": sp.sig_fold,
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -94,7 +95,7 @@ def Arithmatic_Operations():
         if sig:
             sig = operations[op](sig, steps, dir == "Right")
 
-    elif op in ["Accumulate", "Square"]:
+    elif op in ["Accumulate", "Square", "Fold"]:
         if sig:
             sig = operations[op](sig)
 
@@ -117,6 +118,7 @@ def fourier_transform():
 operations = {
     "Plot": Signal_Source,
     "Fourier Transform": fourier_transform,
+    "DCT": sp.sig_dst,
     "Quantize": Signal_Source,
     "Arithmatic": Arithmatic_Operations,
 }
@@ -128,7 +130,12 @@ if __name__ == "__main__":
     main_cols = st.columns(2)
     with main_cols[0]:
         op = st.selectbox("**Choose operation type**", operations.keys())
-        sig, uploaded_file = operations[op]()
+        if op == "DCT":
+            sig, uploaded_file = Signal_Source()
+            if sig:
+                sig = operations[op](sig)
+        else:
+            sig, uploaded_file = operations[op]()
 
     with main_cols[1]:
         if sig and op not in ["Quantize"]:
@@ -163,7 +170,7 @@ if __name__ == "__main__":
                     with cols[1]:
                         st.write("Quantized Signal:", quantized)
                         st.write("Quantization Error:", error)
-                sp.draw_quantization(quantized, sig, error, show_error)
+                plt.draw_quantization(quantized, sig, error, show_error)
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
