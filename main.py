@@ -1,4 +1,8 @@
+from audioop import reverse
+
 import streamlit as st
+from numpy.ma.core import indices
+
 import tests as tst
 import signalProcessing as sp
 import plot as plt
@@ -59,8 +63,6 @@ def Arithmatic_Operations():
         "Normalize": sp.sig_norm,
         "Square": sp.sig_square,
         "Accumulate": sp.sig_acc,
-        "Shift": sp.sig_shift,
-        "Fold": sp.sig_fold,
     }
 
     op = st.selectbox("Choose Arithmatic Operation", operations.keys())
@@ -89,13 +91,9 @@ def Arithmatic_Operations():
         if sig:
             sig = operations[op](sig, _range == "0 , 1")
 
-    elif op == "Shift":
-        steps = st.number_input("Steps ", value=0)
-        dir = st.radio("Direction", ["Right", "Left"], horizontal=True)
-        if sig:
-            sig = operations[op](sig, steps, dir == "Right")
 
-    elif op in ["Accumulate", "Square", "Fold"]:
+
+    elif op in ["Accumulate", "Square"]:
         if sig:
             sig = operations[op](sig)
 
@@ -118,9 +116,12 @@ def fourier_transform():
 operations = {
     "Plot": Signal_Source,
     "Fourier Transform": fourier_transform,
-    "DCT": sp.sig_dst,
+    "DCT": sp.sig_dct,
     "Quantize": Signal_Source,
     "Arithmatic": Arithmatic_Operations,
+    "Shift": sp.sig_shift,
+    "Fold": sp.sig_fold,
+    "sharpning": tst.DerivativeSignal()
 }
 
 if __name__ == "__main__":
@@ -134,6 +135,26 @@ if __name__ == "__main__":
             sig, uploaded_file = Signal_Source()
             if sig:
                 sig = operations[op](sig)
+        elif op == "Shift":
+            sig, uploaded_file = Signal_Source()
+            steps = st.number_input("Steps ", value=0)
+            dir = st.radio("Direction", ["Delay", "Advance"], horizontal=True)
+            fold = st.checkbox("Fold", value=False)
+            if fold and sig:
+                sig = operations["Fold"](sig)
+            if sig:
+                sig = operations[op](sig, steps, dir == "Delay")
+
+
+        elif op in ["Fold"]:
+            sig, uploaded_file = Signal_Source()
+            if sig:
+                sig = operations[op](sig)
+
+
+        elif op == "sharpning":
+            st.write(tst.DerivativeSignal())
+            sig = None
         else:
             sig, uploaded_file = operations[op]()
 
@@ -174,10 +195,18 @@ if __name__ == "__main__":
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
-        if test_file and sig and op not in ["Quantize", "Fourier Transform"]:
+        if test_file and sig and op not in ["Quantize", "Fourier Transform","Fold","Shift"]:
             st.write(
                 tst.SignalSamplesAreEqual(
                     test_file, sp.signal_idx(sig), sp.signal_samples(sig)
+                )
+            )
+        elif test_file and sig and op  in ["Fold","Shift"]:
+            indices = sp.signal_idx(sig)
+            amps = sp.signal_samples(sig)
+            st.write(
+                tst.Shift_Fold_Signal(f"C:/Users/Ahmed/Desktop/task5/Shifting_and_folding/Shifting and Folding/{test_file.name}"
+                    ,indices , amps
                 )
             )
 

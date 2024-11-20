@@ -3,6 +3,8 @@ from enum import Enum
 import streamlit as st
 import math
 
+from numpy.ma.core import indices
+
 Signal: NewType = NewType("Signal", dict)
 # layout
 # {
@@ -192,11 +194,13 @@ def sig_shift(sig: Signal, steps: int, right_dir: bool = 1):
 
 
 def sig_fold(sig: Signal) -> Signal:
+    indices = signal_idx(sig)
+    amps = [sig.get(-i, [0,0])[0] for i in signal_idx(sig)]
     return signal(
         periodic=sig["periodic"],
         sig_type=sig["signal_type"],
-        indices=[-i for i in signal_idx(sig)],
-        samples=signal_samples(sig),
+        indices=indices,
+        samples=amps,
         phase_shifts=signal_phase_shifts(sig),
     )
 
@@ -293,20 +297,32 @@ def fourier_transform(check=0, sig: Signal = None, fs=0):
         )
 
 
-def sig_dst(sig: Signal):
-    indices = signal_idx(sig)
-    N = len(indices)
-    xk = [0 for i in range(N)]
+def sig_dct(sig: Signal):
+    amps = signal_samples(sig)
+    N = len(amps)
+    y = []
 
     for k in range(N):
+        sum = 0
         for n in range(1, N + 1):
-            xk[k] += sig.get(n, [0])[0] * math.cos(
-                4 / (math.pi * N) * (2 * n - 1) * (2 * k - 1)
-            )
-        xk[k] *= math.sqrt(2 / N)
+            sum += amps[n - 1] * math.cos(math.pi * (2 * (n - 1) - 1) * (2 * k - 1) / (4 * N))
+
+        y.append(math.sqrt(2 / N) * sum)
+
     return signal(
         sig["periodic"],
         sig_type=Signal_type.TIME,
         indices=[i for i in range(N)],
-        samples=xk,
+        samples=y,
     )
+
+def compute_first_derivative(sig):
+        amplitudes = signal_samples(sig)
+        return [amplitudes[i] - amplitudes[i - 1] for i in range(1, len(amplitudes))]
+
+def compute_second_derivative(sig):
+    amplitudes = signal_samples(sig)
+    return [
+        amplitudes[i + 1] - 2 * amplitudes[i] + amplitudes[i - 1]
+        for i in range(1, len(amplitudes) - 1)
+    ]
