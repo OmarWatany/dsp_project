@@ -210,7 +210,7 @@ if __name__ == "__main__":
             amps = sp.signal_samples(sig)
             st.write(
                 tst.Shift_Fold_Signal(
-                    f"Tasks/task5/Shifting and Folding/{test_file.name}",
+                    test_file,
                     indices,
                     amps,
                 )

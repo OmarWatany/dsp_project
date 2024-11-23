@@ -210,28 +210,11 @@ def DerivativeSignal():
     return
 
 
-def Shift_Fold_Signal(file_name, Your_indices, Your_samples):
-    # return(indices)
-    expected_indices = []
-    expected_samples = []
-    with open(file_name, "r") as f:
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        while line:
-            # process line
-            L = line.strip()
-            if len(L.split(" ")) == 2:
-                L = line.split(" ")
-                V1 = int(L[0])
-                V2 = float(L[1])
-                expected_indices.append(V1)
-                expected_samples.append(V2)
-                line = f.readline()
-            else:
-                break
-    # return(f"Current Output Test file is: {file_name} \n")
+def Shift_Fold_Signal(uploaded_file, Your_indices, Your_samples):
+    sig = sp.read_file(uploaded_file)
+    expected_indices = sp.signal_idx(sig)
+    expected_samples = sp.signal_samples(sig)
+    st.write(f"Current Output Test file is: {uploaded_file.name}")
     if (len(expected_samples) != len(Your_samples)) and (
         len(expected_indices) != len(Your_indices)
     ):
@@ -278,28 +261,13 @@ def ConvTest(Your_indices, Your_samples):
     return "Conv Test case passed successfully"
 
 
-def Compare_Signals(file_name, Your_indices, Your_samples):
+def Compare_Signals(uploaded_file, Your_indices, Your_samples):
     # Correlation
-    expected_indices = []
-    expected_samples = []
-    with open(file_name, "r") as f:
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        while line:
-            # process line
-            L = line.strip()
-            if len(L.split(" ")) == 2:
-                L = line.split(" ")
-                V1 = int(L[0])
-                V2 = float(L[1])
-                expected_indices.append(V1)
-                expected_samples.append(V2)
-                line = f.readline()
-            else:
-                break
-    st.write(f"Current Output Test file is: {file_name}")
+    sig = sp.read_file(uploaded_file)
+    expected_indices = sp.signal_idx(sig)
+    expected_samples = sp.signal_samples(sig)
+
+    st.write(f"Current Output Test file is: {uploaded_file.name}")
     if (len(expected_samples) != len(Your_samples)) and (
         len(expected_indices) != len(Your_indices)
     ):
