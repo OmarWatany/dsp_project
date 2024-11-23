@@ -121,6 +121,7 @@ operations = {
     "Fold": None,
     "Sharpning": None,
     "Smoothe": None,
+    "Remove DC component": None,
 }
 
 if __name__ == "__main__":
@@ -158,6 +159,11 @@ if __name__ == "__main__":
         elif op == "Sharpning":
             st.write(tst.DerivativeSignal())
             sig = None
+
+        elif op == "Remove DC component":
+            sig, uploaded_file = Signal_Source()
+            if sig:
+                sig = sp.sig_rm_dc(sig)
 
         else:
             sig, uploaded_file = operations[op]()

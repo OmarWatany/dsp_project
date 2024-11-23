@@ -329,15 +329,22 @@ def compute_second_derivative(sig):
     ]
 
 
+def sig_avg(samples: [int or float]):
+    sum = 0
+    size = len(samples)
+    for i in range(size):
+        sum += samples[i]
+    return sum / size
+
+
 def sig_smoothe(sig, windowSize=0):
     samples = signal_samples(sig)
     averages = []
 
     for i in range(len(samples) - windowSize + 1):
-        sum = 0
-        for j in range(windowSize):
-            sum += samples[i + j]
-        averages.append(sum / windowSize)
+        averages.append(
+            sig_avg(samples[i : i + windowSize])
+        )  # take slice(array) from samples from i to i+windowSize
 
     return signal(
         periodic=sig["periodic"],
@@ -345,3 +352,22 @@ def sig_smoothe(sig, windowSize=0):
         indices=[i for i in range(len(averages))],
         samples=averages,
     )
+
+
+def sig_rm_dc(sig):
+    samples = signal_samples(sig)
+    size = len(samples)
+    if sig["signal_type"] == Signal_type.TIME:
+        avg = sig_avg(samples)
+        return signal(
+            periodic=sig["periodic"],
+            sig_type=sig["signal_type"],
+            indices=[i for i in range(size)],
+            samples=[samples[i] - avg for i in range(size)],
+        )
+
+    elif sig["sig_type"] == Signal_type.FREQ:
+        indices = signal_idx(sig)
+        sig.pop(indices[0])
+        return sig
+    return None
