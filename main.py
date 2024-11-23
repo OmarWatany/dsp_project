@@ -98,7 +98,7 @@ def Arithmatic_Operations():
     return sig, None
 
 
-def fourier_transform():
+def Fourier_Transform():
     sig, uploaded_file = Signal_Source(f_flag=1)
     func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
     if func == "DFT" and sig:
@@ -113,13 +113,13 @@ def fourier_transform():
 # similar to FOS Commands list
 operations = {
     "Plot": Signal_Source,
-    "Fourier Transform": fourier_transform,
-    "DCT": sp.sig_dct,
+    "Fourier Transform": Fourier_Transform,
+    "DCT": None,
     "Quantize": Signal_Source,
     "Arithmatic": Arithmatic_Operations,
-    "Shift": sp.sig_shift,
-    "Fold": sp.sig_fold,
-    "sharpning": tst.DerivativeSignal(),
+    "Shift": None,
+    "Fold": None,
+    "Sharpning": None,
 }
 
 if __name__ == "__main__":
@@ -132,25 +132,26 @@ if __name__ == "__main__":
         if op == "DCT":
             sig, uploaded_file = Signal_Source()
             if sig:
-                sig = operations[op](sig)
+                sig = sp.sig_dct(sig)
+
         elif op == "Shift":
             sig, uploaded_file = Signal_Source()
-            steps = st.number_input("Steps ", value=0)
-            dir = st.radio("Direction", ["Delay", "Advance"], horizontal=True)
+            steps = st.number_input("Steps (+ for Delay , - for Advance)", value=0)
             fold = st.checkbox("Fold", value=False)
             if fold and sig:
-                sig = operations["Fold"](sig)
+                sig = sp.sig_fold(sig)
             if sig:
-                sig = operations[op](sig, steps, dir == "Delay")
+                sig = sp.sig_shift(sig, steps)
 
-        elif op in ["Fold"]:
+        elif op == "Fold":
             sig, uploaded_file = Signal_Source()
             if sig:
-                sig = operations[op](sig)
+                sig = sp.sig_fold(sig)
 
-        elif op == "sharpning":
+        elif op == "Sharpning":
             st.write(tst.DerivativeSignal())
             sig = None
+
         else:
             sig, uploaded_file = operations[op]()
 
@@ -191,17 +192,7 @@ if __name__ == "__main__":
 
     with main_cols[0]:
         test_file = st.file_uploader("Test file", type="txt")
-        if (
-            test_file
-            and sig
-            and op not in ["Quantize", "Fourier Transform", "Fold", "Shift"]
-        ):
-            st.write(
-                tst.SignalSamplesAreEqual(
-                    test_file, sp.signal_idx(sig), sp.signal_samples(sig)
-                )
-            )
-        elif test_file and sig and op in ["Fold", "Shift"]:
+        if test_file and sig and op in ["Fold", "Shift"]:
             indices = sp.signal_idx(sig)
             amps = sp.signal_samples(sig)
             st.write(
@@ -212,7 +203,7 @@ if __name__ == "__main__":
                 )
             )
 
-        if test_file and encoded and quantized:
+        elif test_file and op == "Quantize" and encoded and quantized:
             if uploaded_file.name == "Quan1_input.txt":
                 tst.QuantizationTest1(test_file, encoded, quantized)
             else:
@@ -223,3 +214,10 @@ if __name__ == "__main__":
                     quantized,
                     error,
                 )
+
+        elif test_file and sig and op not in ["Fourier Transform"]:
+            st.write(
+                tst.SignalSamplesAreEqual(
+                    test_file, sp.signal_idx(sig), sp.signal_samples(sig)
+                )
+            )

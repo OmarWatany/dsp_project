@@ -182,8 +182,7 @@ def sig_acc(signal: Signal):
     return signal
 
 
-def sig_shift(sig: Signal, steps: int, right_dir: bool = 1):
-    steps = steps if right_dir else -steps
+def sig_shift(sig: Signal, steps: int):
     return signal(
         periodic=sig["periodic"],
         sig_type=sig["signal_type"],
@@ -194,13 +193,11 @@ def sig_shift(sig: Signal, steps: int, right_dir: bool = 1):
 
 
 def sig_fold(sig: Signal) -> Signal:
-    indices = signal_idx(sig)
-    amps = [sig.get(-i, [0,0])[0] for i in signal_idx(sig)]
     return signal(
         periodic=sig["periodic"],
         sig_type=sig["signal_type"],
-        indices=indices,
-        samples=amps,
+        indices=signal_idx(sig),
+        samples=[sig.get(-i, [0, 0])[0] for i in signal_idx(sig)],
         phase_shifts=signal_phase_shifts(sig),
     )
 
@@ -305,7 +302,9 @@ def sig_dct(sig: Signal):
     for k in range(N):
         sum = 0
         for n in range(1, N + 1):
-            sum += amps[n - 1] * math.cos(math.pi * (2 * (n - 1) - 1) * (2 * k - 1) / (4 * N))
+            sum += amps[n - 1] * math.cos(
+                math.pi * (2 * (n - 1) - 1) * (2 * k - 1) / (4 * N)
+            )
 
         y.append(math.sqrt(2 / N) * sum)
 
@@ -316,9 +315,11 @@ def sig_dct(sig: Signal):
         samples=y,
     )
 
+
 def compute_first_derivative(sig):
-        amplitudes = signal_samples(sig)
-        return [amplitudes[i] - amplitudes[i - 1] for i in range(1, len(amplitudes))]
+    amplitudes = signal_samples(sig)
+    return [amplitudes[i] - amplitudes[i - 1] for i in range(1, len(amplitudes))]
+
 
 def compute_second_derivative(sig):
     amplitudes = signal_samples(sig)
