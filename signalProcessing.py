@@ -327,3 +327,21 @@ def compute_second_derivative(sig):
         amplitudes[i + 1] - 2 * amplitudes[i] + amplitudes[i - 1]
         for i in range(1, len(amplitudes) - 1)
     ]
+
+
+def sig_smoothe(sig, windowSize=0):
+    samples = signal_samples(sig)
+    averages = []
+
+    for i in range(len(samples) - windowSize + 1):
+        sum = 0
+        for j in range(windowSize):
+            sum += samples[i + j]
+        averages.append(sum / windowSize)
+
+    return signal(
+        periodic=sig["periodic"],
+        sig_type=sig["signal_type"],
+        indices=[i for i in range(len(averages))],
+        samples=averages,
+    )

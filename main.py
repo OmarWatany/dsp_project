@@ -120,6 +120,7 @@ operations = {
     "Shift": None,
     "Fold": None,
     "Sharpning": None,
+    "Smoothe": None,
 }
 
 if __name__ == "__main__":
@@ -147,6 +148,12 @@ if __name__ == "__main__":
             sig, uploaded_file = Signal_Source()
             if sig:
                 sig = sp.sig_fold(sig)
+
+        elif op == "Smoothe":
+            sig, uploaded_file = Signal_Source()
+            winSize = st.number_input("Window Size:", min_value=1, value=2)
+            if sig:
+                sig = sp.sig_smoothe(sig, winSize)
 
         elif op == "Sharpning":
             st.write(tst.DerivativeSignal())
