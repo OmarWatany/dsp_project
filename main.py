@@ -6,6 +6,7 @@ from numpy.ma.core import indices
 import tests as tst
 import signalProcessing as sp
 import plot as plt
+from signalProcessing import convolution
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -109,6 +110,18 @@ def Fourier_Transform():
 
     return sig, uploaded_file
 
+def Conv():
+    sig=None
+    signals = []
+    cols = st.columns(2)
+    for i in range(len(cols)):
+        with cols[i]:
+            signal, up_file = Signal_Source(idx=i)
+            signals.append(signal)
+
+    if signals[0] and signals[1]:
+        sig = convolution(signals[0], signals[1])
+    return sig,None
 
 # similar to FOS Commands list
 operations = {
@@ -122,6 +135,7 @@ operations = {
     "Sharpning": None,
     "Smoothe": None,
     "Remove DC component": None,
+    "Convolution" : Conv,
 }
 
 if __name__ == "__main__":
@@ -221,6 +235,11 @@ if __name__ == "__main__":
                     indices,
                     amps,
                 )
+            )
+
+        elif test_file and sig and op == "Convolution":
+            st.write(
+                tst.ConvTest(None,sp.signal_idx(sig), sp.signal_samples(sig))
             )
 
         elif test_file and op == "Quantize" and encoded and quantized:

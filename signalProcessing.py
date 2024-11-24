@@ -394,3 +394,32 @@ def sig_to_text(sig):
         for i in range(size):
             file_content.append(f"{samples[i]} {phase_shifts[i]}")
     return "\n".join(file_content)
+
+
+def convolution(sig1: Signal, sig2: Signal) -> Signal:
+    # Extract samples&indices from both signals
+    samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
+    indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
+
+    #indices with pairwise sum
+    res_indices = sorted(set(i1 + i2 for i1 in indices_1 for i2 in indices_2))
+
+    res_samples = []
+
+    # Perform convolution
+    for n in res_indices:
+        result = 0
+        for k in indices_1:
+            # Compute h[n-k]
+            shifted_index = n - k
+            # Only add if valid
+            if shifted_index in indices_2:
+                result += sig1.get(k, [0])[0] * sig2.get(shifted_index, [0])[0]
+        res_samples.append(result)
+
+    return signal(
+        periodic=0,
+        sig_type=Signal_type.TIME,
+        indices=res_indices,
+        samples=res_samples
+    )
