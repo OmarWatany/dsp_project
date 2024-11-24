@@ -401,7 +401,7 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
     samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
 
-    #indices with pairwise sum
+    # indices with pairwise sum
     res_indices = sorted(set(i1 + i2 for i1 in indices_1 for i2 in indices_2))
 
     res_samples = []
@@ -418,8 +418,5 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
         res_samples.append(result)
 
     return signal(
-        periodic=0,
-        sig_type=Signal_type.TIME,
-        indices=res_indices,
-        samples=res_samples
+        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=res_samples
     )

@@ -110,8 +110,9 @@ def Fourier_Transform():
 
     return sig, uploaded_file
 
+
 def Conv():
-    sig=None
+    sig = None
     signals = []
     cols = st.columns(2)
     for i in range(len(cols)):
@@ -121,7 +122,8 @@ def Conv():
 
     if signals[0] and signals[1]:
         sig = convolution(signals[0], signals[1])
-    return sig,None
+    return sig, None
+
 
 # similar to FOS Commands list
 operations = {
@@ -135,7 +137,7 @@ operations = {
     "Sharpning": None,
     "Smoothe": None,
     "Remove DC component": None,
-    "Convolution" : Conv,
+    "Convolution": Conv,
 }
 
 if __name__ == "__main__":
@@ -237,10 +239,8 @@ if __name__ == "__main__":
                 )
             )
 
-        elif test_file and sig and op == "Convolution":
-            st.write(
-                tst.ConvTest(None,sp.signal_idx(sig), sp.signal_samples(sig))
-            )
+        elif sig and op == "Convolution":
+            st.write(tst.ConvTest(sp.signal_idx(sig), sp.signal_samples(sig)))
 
         elif test_file and op == "Quantize" and encoded and quantized:
             if uploaded_file.name == "Quan1_input.txt":
