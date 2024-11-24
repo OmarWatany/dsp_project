@@ -3,8 +3,6 @@ from enum import Enum
 import streamlit as st
 import math
 
-from numpy.ma.core import indices
-
 Signal: NewType = NewType("Signal", dict)
 # layout
 # {
@@ -41,7 +39,12 @@ def signal_samples(sig: Signal):
 
 
 def signal_phase_shifts(sig: Signal):
-    return [sig[i][1] for i in sig.keys() if isinstance(i, int | float)]
+    ph = (
+        [sig[i][1] for i in sig.keys() if isinstance(i, int | float)]
+        if sig["signal_type"] == Signal_type.FREQ
+        else None
+    )
+    return ph
 
 
 def generate_signal(
@@ -366,8 +369,28 @@ def sig_rm_dc(sig):
             samples=[samples[i] - avg for i in range(size)],
         )
 
-    elif sig["sig_type"] == Signal_type.FREQ:
+    elif sig["signal_type"] == Signal_type.FREQ:
         indices = signal_idx(sig)
-        sig.pop(indices[0])
+        sig[indices[0]] = [0, 0]
         return sig
+
     return None
+
+
+def sig_to_text(sig):
+    indices = signal_idx(sig)
+    samples = signal_samples(sig)
+    phase_shifts = signal_phase_shifts(sig)
+    size = len(indices)
+    file_content = [
+        f"{sig["signal_type"].value}",
+        f"{sig["periodic"]}",
+        f"{size}",
+    ]
+    if sig["signal_type"] == Signal_type.TIME:
+        for i in range(size):
+            file_content.append(f"{indices[i]} {samples[i]}")
+    elif sig["signal_type"] == Signal_type.FREQ:
+        for i in range(size):
+            file_content.append(f"{samples[i]} {phase_shifts[i]}")
+    return "\n".join(file_content)

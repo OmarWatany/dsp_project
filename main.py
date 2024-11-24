@@ -171,6 +171,13 @@ if __name__ == "__main__":
     with main_cols[1]:
         if sig and op not in ["Quantize"]:
             plt.plot_signal(sig)
+            content = sp.sig_to_text(sig)
+
+            st.download_button(
+                label="Export Signal",
+                data=content,
+                file_name="signal_exported.txt",
+            )
 
     interval_index, encoded, quantized, error = None, None, None, None
     if op == "Quantize":
