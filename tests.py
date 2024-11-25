@@ -259,25 +259,3 @@ def ConvTest(Your_indices, Your_samples):
         else:
             return "Conv Test case failed, your signal have different values from the expected one"
     return "Conv Test case passed successfully"
-
-
-def Compare_Signals(uploaded_file, Your_indices, Your_samples):
-    # Correlation
-    sig = sp.read_file(uploaded_file)
-    expected_indices = sp.signal_idx(sig)
-    expected_samples = sp.signal_samples(sig)
-
-    st.write(f"Current Output Test file is: {uploaded_file.name}")
-    if (len(expected_samples) != len(Your_samples)) and (
-        len(expected_indices) != len(Your_indices)
-    ):
-        return "Shift_Fold_Signal Test case failed, your signal have different length from the expected one"
-    for i in range(len(Your_indices)):
-        if Your_indices[i] != expected_indices[i]:
-            return "Shift_Fold_Signal Test case failed, your signal have different indicies from the expected one"
-    for i in range(len(expected_samples)):
-        if abs(Your_samples[i] - expected_samples[i]) < 0.01:
-            continue
-        else:
-            return "Correlation Test case failed, your signal have different values from the expected one"
-    return "Correlation Test case passed successfully"

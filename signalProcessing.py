@@ -333,11 +333,7 @@ def compute_second_derivative(sig):
 
 
 def sig_avg(samples: [int or float]):
-    sum = 0
-    size = len(samples)
-    for i in range(size):
-        sum += samples[i]
-    return sum / size
+    return sum(samples) / len(samples)
 
 
 def sig_smoothe(sig, windowSize=0):
@@ -401,8 +397,8 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
     samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
 
-    #indices with pairwise sum
-    res_indices = sorted(set(i1 + i2 for i1 in indices_1 for i2 in indices_2))
+    # indices with pairwise sum
+    res_indices = sorted(i1 + i2 for i1 in indices_1 for i2 in indices_2)
 
     res_samples = []
 
@@ -421,99 +417,34 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
         periodic=0,
         sig_type=Signal_type.TIME,
         indices=res_indices,
-        samples=res_samples
+        samples=res_samples,
     )
 
 
-# def correlation(sig1: Signal, sig2: Signal) -> Signal:
-#     # Extract samples & indices from both signals
-#     samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
-#     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
-#
-#     # Indices for cross-correlation are the pairwise differences of the indices
-#     res_indices = sorted(set(i1 - i2 for i1 in indices_1 for i2 in indices_2))
-#
-#     # The resulting indices should reflect valid overlaps, so filter them if necessary
-#     valid_indices = [n for n in res_indices if min(indices_1) <= n + min(indices_2) <= max(indices_1) + max(indices_2)]
-#
-#     res_samples = []
-#
-#     # Compute the cross-correlation for each valid index in valid_indices
-#     for n in valid_indices:
-#         result = 0
-#         # For each valid shift (n), calculate the sum of products
-#         for k in indices_1:
-#             # Compute shifted index for sig2 (n + k is the index in sig1)
-#             shifted_index = k - n
-#             # Only add if the shifted index is valid for sig2
-#             if shifted_index in indices_2:
-#                 result += sig1.get(k, [0])[0] * sig2.get(shifted_index, [0])[0]
-#
-#         # Append the result for this particular lag (shift)
-#         res_samples.append(result)
-#
-#     # Normalize the cross-correlation
-#     norm1 = sum(x * x for x in samples1)
-#     norm2 = sum(x * x for x in samples2)
-#
-#     normalization_factor = (norm1 * norm2) ** 0.5
-#
-#     # Normalize the result samples
-#     normalized_samples = [r / normalization_factor if normalization_factor != 0 else 0 for r in res_samples]
-#
-#     return signal(
-#         periodic=0,
-#         sig_type=Signal_type.TIME,
-#         indices=valid_indices,
-#         samples=normalized_samples
-#     )
 def correlation(sig1: Signal, sig2: Signal) -> Signal:
     # Extract samples & indices from both signals
-    samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
+    signal1, signal2 = signal_samples(sig1), signal_samples(sig2)
     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
 
     # Indices for cross-correlation are the pairwise differences of the indices
-    res_indices = sorted(set(i1 - i2 for i1 in indices_1 for i2 in indices_2))
+    res_indices = sorted(set(indices_1 + indices_2))
 
-    # The resulting indices should reflect valid overlaps, so filter them if necessary
-    valid_indices = [n for n in res_indices if min(indices_1) <= n + min(indices_2) <= max(indices_1) + max(indices_2)]
+    N = len(signal1)
+    result = []
+    for j in res_indices:
+        sum = 0
+        firstSum = 0
+        secondSum = 0
 
-    res_samples = []
+        for n in range(N):
+            sum += signal1[n] * signal2[j + n - N]
+            firstSum += signal1[n] ** 2
+            secondSum += signal2[n] ** 2
 
-    # Perform normalized cross-correlation
-    for n in valid_indices:
-        sum_prod = 0
-        sum_sig1_sq = 0
-        sum_sig2_sq = 0
-
-        for k in indices_1:
-            shifted_index = n + k
-            # Only compute if shifted index is valid for both signals
-            if shifted_index in indices_2:
-                # Get the samples using the get method, defaulting to 0 if not found
-                x1 = sig1.get(k, [0])[0]
-                x2 = sig2.get(shifted_index, [0])[0]
-                sum_prod += x1 * x2
-                sum_sig1_sq += x1 ** 2
-                sum_sig2_sq += x2 ** 2
-
-        # Normalize the result
-        numerator = sum_prod
-        denominator = (sum_sig1_sq * sum_sig2_sq) ** 0.5
-
-        # Avoid division by zero
-        if denominator != 0:
-            res_samples.append(numerator / denominator)
-        else:
-            res_samples.append(0)  # or some other value, depending on your use case
+        numerator = sum / N
+        denominator = ((firstSum * secondSum) ** 0.5) / N
+        result.append(numerator / denominator)
 
     return signal(
-        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=res_samples
+        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=result
     )
-
-
-
-
-
-
-
