@@ -333,11 +333,7 @@ def compute_second_derivative(sig):
 
 
 def sig_avg(samples: [int or float]):
-    sum = 0
-    size = len(samples)
-    for i in range(size):
-        sum += samples[i]
-    return sum / size
+    return sum(samples) / len(samples)
 
 
 def sig_smoothe(sig, windowSize=0):
@@ -418,5 +414,37 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
         res_samples.append(result)
 
     return signal(
-        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=res_samples
+        periodic=0,
+        sig_type=Signal_type.TIME,
+        indices=res_indices,
+        samples=res_samples,
+    )
+
+
+def correlation(sig1: Signal, sig2: Signal) -> Signal:
+    # Extract samples & indices from both signals
+    signal1, signal2 = signal_samples(sig1), signal_samples(sig2)
+    indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
+
+    # Indices for cross-correlation are the pairwise differences of the indices
+    res_indices = sorted(set(indices_1 + indices_2))
+
+    N = len(signal1)
+    result = []
+    for j in res_indices:
+        sum = 0
+        firstSum = 0
+        secondSum = 0
+
+        for n in range(N):
+            sum += signal1[n] * signal2[j + n - N]
+            firstSum += signal1[n] ** 2
+            secondSum += signal2[n] ** 2
+
+        numerator = sum / N
+        denominator = ((firstSum * secondSum) ** 0.5) / N
+        result.append(numerator / denominator)
+
+    return signal(
+        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=result
     )

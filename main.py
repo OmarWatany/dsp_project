@@ -1,12 +1,7 @@
-from audioop import reverse
-
 import streamlit as st
-from numpy.ma.core import indices
-
 import tests as tst
 import signalProcessing as sp
 import plot as plt
-from signalProcessing import convolution
 
 
 def file_signal(index=-1, f_flag: bool = 0):
@@ -121,7 +116,21 @@ def Conv():
             signals.append(signal)
 
     if signals[0] and signals[1]:
-        sig = convolution(signals[0], signals[1])
+        sig = sp.convolution(signals[0], signals[1])
+    return sig, None
+
+
+def Corr():
+    sig = None
+    signals = []
+    cols = st.columns(2)
+    for i in range(len(cols)):
+        with cols[i]:
+            signal, up_file = Signal_Source(idx=i)
+            signals.append(signal)
+
+    if signals[0] and signals[1]:
+        sig = sp.correlation(signals[0], signals[1])
     return sig, None
 
 
@@ -138,6 +147,7 @@ operations = {
     "Smoothe": None,
     "Remove DC component": None,
     "Convolution": Conv,
+    "Correlation": Corr,
 }
 
 if __name__ == "__main__":
