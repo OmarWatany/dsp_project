@@ -423,3 +423,97 @@ def convolution(sig1: Signal, sig2: Signal) -> Signal:
         indices=res_indices,
         samples=res_samples
     )
+
+
+# def correlation(sig1: Signal, sig2: Signal) -> Signal:
+#     # Extract samples & indices from both signals
+#     samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
+#     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
+#
+#     # Indices for cross-correlation are the pairwise differences of the indices
+#     res_indices = sorted(set(i1 - i2 for i1 in indices_1 for i2 in indices_2))
+#
+#     # The resulting indices should reflect valid overlaps, so filter them if necessary
+#     valid_indices = [n for n in res_indices if min(indices_1) <= n + min(indices_2) <= max(indices_1) + max(indices_2)]
+#
+#     res_samples = []
+#
+#     # Compute the cross-correlation for each valid index in valid_indices
+#     for n in valid_indices:
+#         result = 0
+#         # For each valid shift (n), calculate the sum of products
+#         for k in indices_1:
+#             # Compute shifted index for sig2 (n + k is the index in sig1)
+#             shifted_index = k - n
+#             # Only add if the shifted index is valid for sig2
+#             if shifted_index in indices_2:
+#                 result += sig1.get(k, [0])[0] * sig2.get(shifted_index, [0])[0]
+#
+#         # Append the result for this particular lag (shift)
+#         res_samples.append(result)
+#
+#     # Normalize the cross-correlation
+#     norm1 = sum(x * x for x in samples1)
+#     norm2 = sum(x * x for x in samples2)
+#
+#     normalization_factor = (norm1 * norm2) ** 0.5
+#
+#     # Normalize the result samples
+#     normalized_samples = [r / normalization_factor if normalization_factor != 0 else 0 for r in res_samples]
+#
+#     return signal(
+#         periodic=0,
+#         sig_type=Signal_type.TIME,
+#         indices=valid_indices,
+#         samples=normalized_samples
+#     )
+def correlation(sig1: Signal, sig2: Signal) -> Signal:
+    # Extract samples & indices from both signals
+    samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
+    indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
+
+    # Indices for cross-correlation are the pairwise differences of the indices
+    res_indices = sorted(set(i1 - i2 for i1 in indices_1 for i2 in indices_2))
+
+    # The resulting indices should reflect valid overlaps, so filter them if necessary
+    valid_indices = [n for n in res_indices if min(indices_1) <= n + min(indices_2) <= max(indices_1) + max(indices_2)]
+
+    res_samples = []
+
+    # Perform normalized cross-correlation
+    for n in valid_indices:
+        sum_prod = 0
+        sum_sig1_sq = 0
+        sum_sig2_sq = 0
+
+        for k in indices_1:
+            shifted_index = n + k
+            # Only compute if shifted index is valid for both signals
+            if shifted_index in indices_2:
+                # Get the samples using the get method, defaulting to 0 if not found
+                x1 = sig1.get(k, [0])[0]
+                x2 = sig2.get(shifted_index, [0])[0]
+                sum_prod += x1 * x2
+                sum_sig1_sq += x1 ** 2
+                sum_sig2_sq += x2 ** 2
+
+        # Normalize the result
+        numerator = sum_prod
+        denominator = (sum_sig1_sq * sum_sig2_sq) ** 0.5
+
+        # Avoid division by zero
+        if denominator != 0:
+            res_samples.append(numerator / denominator)
+        else:
+            res_samples.append(0)  # or some other value, depending on your use case
+
+    return signal(
+        periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=res_samples
+    )
+
+
+
+
+
+
+
