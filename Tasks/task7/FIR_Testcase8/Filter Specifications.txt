@@ -1,0 +1,6 @@
+FilterType = Band stop
+FS = 1000
+StopBandAttenuation = 60
+F1 = 150
+F2 = 250
+TransitionBand = 50
