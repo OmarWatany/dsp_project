@@ -95,15 +95,39 @@ def Arithmatic_Operations():
 
 
 def Fourier_Transform():
+    out_sig = None
     sig, uploaded_file = Signal_Source(f_flag=1)
     func = st.radio("Transformation function", ["DFT", "IDFT"], horizontal=True)
     if func == "DFT" and sig:
         fs = st.number_input("Sampling Freq (HZ) :", value=1)
-        sig = sp.fourier_transform(0, sig, fs)
-    elif func == "IDFT" and sig:
-        sig = sp.fourier_transform(1, sig)
+        out_sig = sp.fourier_transform(0, sig, fs)
 
-    return sig, uploaded_file
+    elif func == "IDFT" and sig:
+        out_sig = sp.fourier_transform(1, sig)
+
+    test_file = st.file_uploader("Test file", type="txt")
+    if test_file and out_sig:
+        if func == "DFT" and out_sig:
+            test_sig = sp.read_file(test_file)
+            r = False
+            r = tst.SignalComapreAmplitude(
+                sp.signal_samples(test_sig), sp.signal_samples(out_sig)
+            ) and tst.SignalComaprePhaseShift(
+                sp.signal_phase_shifts(test_sig), sp.signal_phase_shifts(out_sig)
+            )
+            if r:
+                st.write("Test case passed successfully")
+            else:
+                st.write("Test case failed")
+
+        elif func == "IDFT" and sig:
+            st.write(
+                tst.SignalSamplesAreEqual(
+                    test_file, sp.signal_idx(out_sig), sp.signal_samples(out_sig)
+                )
+            )
+
+    return out_sig, uploaded_file
 
 
 def Conv():
@@ -237,7 +261,9 @@ if __name__ == "__main__":
                 plt.draw_quantization(quantized, sig, error, show_error)
 
     with main_cols[0]:
-        test_file = st.file_uploader("Test file", type="txt")
+        test_file = None
+        if op not in ["Fourier Transform"]:
+            test_file = st.file_uploader("Test file", type="txt")
         if test_file and sig and op in ["Fold", "Shift"]:
             indices = sp.signal_idx(sig)
             amps = sp.signal_samples(sig)
@@ -252,7 +278,7 @@ if __name__ == "__main__":
         elif sig and op == "Convolution":
             st.write(tst.ConvTest(sp.signal_idx(sig), sp.signal_samples(sig)))
 
-        elif test_file and op == "Quantize" and encoded and quantized:
+        elif test_file and sig and op == "Quantize" and encoded and quantized:
             if uploaded_file.name == "Quan1_input.txt":
                 tst.QuantizationTest1(test_file, encoded, quantized)
             else:

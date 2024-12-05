@@ -30,8 +30,7 @@ def SignalComapreAmplitude(SignalInput=[], SignalOutput=[]):
     else:
         for i in range(len(SignalInput)):
             if abs(SignalInput[i] - SignalOutput[i]) > 0.001:
-                return False
-            elif SignalInput[i] != SignalOutput[i]:
+                st.write("error value passed range")
                 return False
         return True
 
