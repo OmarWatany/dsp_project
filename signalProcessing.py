@@ -354,23 +354,29 @@ def sig_smoothe(sig, windowSize=0):
 
 
 def sig_rm_dc(sig):
+    if sig["signal_type"] == Signal_type.FREQ:
+        sig = fourier_transform(1, sig, 10)
+
     samples = signal_samples(sig)
     size = len(samples)
+
+    avg = sig_avg(samples)
+    return signal(
+        periodic=sig["periodic"],
+        sig_type=sig["signal_type"],
+        indices=[i for i in range(size)],
+        samples=[samples[i] - avg for i in range(size)],
+    )
+
+
+def sig_rm_dc_freq(sig):
     if sig["signal_type"] == Signal_type.TIME:
-        avg = sig_avg(samples)
-        return signal(
-            periodic=sig["periodic"],
-            sig_type=sig["signal_type"],
-            indices=[i for i in range(size)],
-            samples=[samples[i] - avg for i in range(size)],
-        )
+        sig = fourier_transform(0, sig, 10)
 
-    elif sig["signal_type"] == Signal_type.FREQ:
-        indices = signal_idx(sig)
-        sig[indices[0]] = [0, 0]
-        return sig
+    indices = signal_idx(sig)
+    sig[indices[0]] = [0, 0]
 
-    return None
+    return fourier_transform(1, sig)
 
 
 def sig_to_text(sig):

@@ -105,6 +105,7 @@ def Fourier_Transform():
     elif func == "IDFT" and sig:
         out_sig = sp.fourier_transform(1, sig)
 
+    # testing
     test_file = st.file_uploader("Test file", type="txt")
     if test_file and out_sig:
         if func == "DFT" and out_sig:
@@ -130,7 +131,53 @@ def Fourier_Transform():
     return out_sig, uploaded_file
 
 
+def Quantization():
+    sig, uploaded_file = Signal_Source(f_flag=1)
+    interval_index, encoded, quantized, error = None, None, None, None
+    with main_cols[0]:
+        quant_type = st.radio("Quantization Type", ["Levels", "Bits"], horizontal=True)
+        no_of_levels = (
+            st.number_input("Number of Levels:", min_value=1, value=2)
+            if quant_type == "Levels"
+            else (1 << st.number_input("Bits:", min_value=1, value=1))
+        )
+
+        show_data = st.checkbox("Show Data", value=False)
+        show_error = st.checkbox("Show Error", value=False)
+
+    with main_cols[1]:
+        if sig:
+            interval_index, encoded, quantized, error = sp.quantize(sig, no_of_levels)
+            # Display chosen outputs
+            if show_data:
+                cols = st.columns(2)
+                with cols[0]:
+                    st.write("Interval Index:", interval_index)
+                    st.write("Encoded Signal:", encoded)
+                with cols[1]:
+                    st.write("Quantized Signal:", quantized)
+                    st.write("Quantization Error:", error)
+            plt.draw_quantization(quantized, sig, error, show_error)
+
+    # testing
+    turn_off_test_file_input()
+    test_file = st.file_uploader("Test file", type="txt")
+    if test_file and sig and op == "Quantize" and encoded and quantized:
+        if uploaded_file.name == "Quan1_input.txt":
+            tst.QuantizationTest1(test_file, encoded, quantized)
+        else:
+            tst.QuantizationTest2(
+                f"Tasks/task3/{test_file.name}",
+                interval_index,
+                encoded,
+                quantized,
+                error,
+            )
+    return None, None
+
+
 def Conv():
+    turn_off_test_file_input()
     sig = None
     signals = []
     cols = st.columns(2)
@@ -158,65 +205,118 @@ def Corr():
     return sig, None
 
 
-# similar to FOS Commands list
-operations = {
-    "Plot": Signal_Source,
-    "Fourier Transform": Fourier_Transform,
-    "DCT": None,
-    "Quantize": Signal_Source,
-    "Arithmatic": Arithmatic_Operations,
-    "Shift": None,
-    "Fold": None,
-    "Sharpning": None,
-    "Smoothe": None,
-    "Remove DC component": None,
-    "Convolution": Conv,
-    "Correlation": Corr,
-}
+def Shift_Fold(op):
+    sig, uploaded_file = Signal_Source()
+    if op == "Shift":
+        steps = st.number_input("Steps (+ for Delay , - for Advance)", value=0)
+        fold = st.checkbox("Fold", value=False)
+        if fold and sig:
+            sig = sp.sig_fold(sig)
+        if sig:
+            sig = sp.sig_shift(sig, steps)
+
+    elif op == "Fold":
+        if sig:
+            sig = sp.sig_fold(sig)
+
+    test_file = st.file_uploader("Test file", type="txt")
+    if test_file and sig and op in ["Fold", "Shift"]:
+        indices = sp.signal_idx(sig)
+        amps = sp.signal_samples(sig)
+        st.write(
+            tst.Shift_Fold_Signal(
+                test_file,
+                indices,
+                amps,
+            )
+        )
+
+    return sig, uploaded_file
+    pass
+
+
+def Time_Domain():
+    time_domain_ops = [
+        "Remove DC component",
+        "Shift",
+        "Fold",
+        "Sharpning",
+        "Smoothe",
+    ]
+    op = st.selectbox("Choose operation", time_domain_ops)
+    sig, uploaded_file = None, None
+
+    if op == "Smoothe":
+        sig, uploaded_file = Signal_Source()
+        winSize = st.number_input("Window Size:", min_value=1, value=2)
+        if sig:
+            sig = sp.sig_smoothe(sig, winSize)
+
+    elif op in ["Shift", "Fold"]:
+        turn_off_test_file_input()
+        sig, uploaded_file = Shift_Fold(op)
+
+    elif op == "Sharpning":
+        turn_off_test_file_input()
+        st.write(tst.DerivativeSignal())
+
+    elif op == "Remove DC component":
+        sig, uploaded_file = Signal_Source()
+        if sig:
+            sig = sp.sig_rm_dc(sig)
+
+    return sig, uploaded_file
+
+
+def Freq_Domain():
+    freq_domain_ops = ["Remove DC component", "Fourier Transform", "DCT"]
+    op = st.selectbox("Choose operation", freq_domain_ops)
+
+    sig, uploaded_file = None, None
+    if op == "DCT":
+        sig, uploaded_file = Signal_Source()
+        if sig:
+            sig = sp.sig_dct(sig)
+
+    elif op == "Remove DC component":
+        sig, uploaded_file = Signal_Source()
+        if sig:
+            sig = sp.sig_rm_dc_freq(sig)
+
+    elif op == "Fourier Transform":
+        turn_off_test_file_input()
+        sig, uploaded_file = Fourier_Transform()
+
+    else:
+        sig, uploaded_file = freq_domain_ops[op]()
+
+    return sig, uploaded_file
+
+
+def turn_off_test_file_input():
+    global draw_test_file_input
+    draw_test_file_input = False
+
 
 if __name__ == "__main__":
+    main_menu = {
+        "Plot": Signal_Source,
+        "Arithmatic": Arithmatic_Operations,
+        "Time Domain": Time_Domain,
+        "Freq Domain": Freq_Domain,
+        "Quantize": Quantization,
+        "Convolution": Conv,
+        "Correlation": Corr,
+    }
+
     st.set_page_config(page_title="DSP Framework", layout="wide")
     st.title("DSP Framework")
+    draw_test_file_input = True
 
     main_cols = st.columns(2)
     with main_cols[0]:
-        op = st.selectbox("**Choose operation type**", operations.keys())
-        if op == "DCT":
-            sig, uploaded_file = Signal_Source()
-            if sig:
-                sig = sp.sig_dct(sig)
-
-        elif op == "Shift":
-            sig, uploaded_file = Signal_Source()
-            steps = st.number_input("Steps (+ for Delay , - for Advance)", value=0)
-            fold = st.checkbox("Fold", value=False)
-            if fold and sig:
-                sig = sp.sig_fold(sig)
-            if sig:
-                sig = sp.sig_shift(sig, steps)
-
-        elif op == "Fold":
-            sig, uploaded_file = Signal_Source()
-            if sig:
-                sig = sp.sig_fold(sig)
-
-        elif op == "Smoothe":
-            sig, uploaded_file = Signal_Source()
-            winSize = st.number_input("Window Size:", min_value=1, value=2)
-            if sig:
-                sig = sp.sig_smoothe(sig, winSize)
-
-        elif op == "Sharpning":
-            st.write(tst.DerivativeSignal())
-            sig = None
-
-        elif op == "Remove DC component":
-            sig, uploaded_file = Signal_Source()
-            if sig:
-                sig = sp.sig_rm_dc(sig)
-
-        else:
-            sig, uploaded_file = operations[op]()
+        op = st.selectbox("**Choose operation type**", main_menu.keys())
+        sig, uploaded_file = main_menu[op]()
 
     with main_cols[1]:
         if sig and op not in ["Quantize"]:
@@ -229,68 +329,15 @@ if __name__ == "__main__":
                 file_name="signal_exported.txt",
             )
 
-    interval_index, encoded, quantized, error = None, None, None, None
-    if op == "Quantize":
-        with main_cols[0]:
-            quant_type = st.radio(
-                "Quantization Type", ["Levels", "Bits"], horizontal=True
-            )
-            no_of_levels = (
-                st.number_input("Number of Levels:", min_value=1, value=2)
-                if quant_type == "Levels"
-                else (1 << st.number_input("Bits:", min_value=1, value=1))
-            )
-
-            show_data = st.checkbox("Show Data", value=False)
-            show_error = st.checkbox("Show Error", value=False)
-
-        with main_cols[1]:
-            if sig:
-                interval_index, encoded, quantized, error = sp.quantize(
-                    sig, no_of_levels
-                )
-                # Display chosen outputs
-                if show_data:
-                    cols = st.columns(2)
-                    with cols[0]:
-                        st.write("Interval Index:", interval_index)
-                        st.write("Encoded Signal:", encoded)
-                    with cols[1]:
-                        st.write("Quantized Signal:", quantized)
-                        st.write("Quantization Error:", error)
-                plt.draw_quantization(quantized, sig, error, show_error)
-
     with main_cols[0]:
         test_file = None
-        if op not in ["Fourier Transform"]:
+        if draw_test_file_input:
             test_file = st.file_uploader("Test file", type="txt")
-        if test_file and sig and op in ["Fold", "Shift"]:
-            indices = sp.signal_idx(sig)
-            amps = sp.signal_samples(sig)
-            st.write(
-                tst.Shift_Fold_Signal(
-                    test_file,
-                    indices,
-                    amps,
-                )
-            )
 
-        elif sig and op == "Convolution":
+        if sig and op == "Convolution":
             st.write(tst.ConvTest(sp.signal_idx(sig), sp.signal_samples(sig)))
 
-        elif test_file and sig and op == "Quantize" and encoded and quantized:
-            if uploaded_file.name == "Quan1_input.txt":
-                tst.QuantizationTest1(test_file, encoded, quantized)
-            else:
-                tst.QuantizationTest2(
-                    f"Tasks/task3/{test_file.name}",
-                    interval_index,
-                    encoded,
-                    quantized,
-                    error,
-                )
-
-        elif test_file and sig and op not in ["Fourier Transform"]:
+        elif sig and test_file:
             st.write(
                 tst.SignalSamplesAreEqual(
                     test_file, sp.signal_idx(sig), sp.signal_samples(sig)
