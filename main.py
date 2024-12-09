@@ -269,21 +269,15 @@ def Resample(sig):
     if M == 0 and L != 0:
         sig = sp.sig_upsample_resample(sig, L)
         sig = Filter("Low pass", sig)
-        samples = sp.signal_samples(sig)
+        # remove the last zeros
         indices = sp.signal_idx(sig)
-        sz = len(samples)
-        zeroCount = 0
-        for s in samples[::-1]:
-            if s == 0:
-                zeroCount += 1
+        i = len(indices) - 1
+        while i >= indices[0]:
+            if sig[indices[i]][0] == 0:  # if sample eq 0
+                sig.pop(indices[i])
+                i -= 1
             else:
                 break
-        sig = sp.signal(
-            sig["periodic"],
-            sig["signal_type"],
-            indices[: sz - zeroCount],
-            samples[: sz - zeroCount],
-        )
     elif M != 0 and L == 0:
         sig = Filter("Low pass", sig)
         sig = sp.sig_downsample_resample(sig, M)
@@ -291,21 +285,15 @@ def Resample(sig):
         sig = sp.sig_upsample_resample(sig, L)
         sig = Filter("Low pass", sig)
         sig = sp.sig_downsample_resample(sig, M)
-        samples = sp.signal_samples(sig)
+        # remove the last zeros
         indices = sp.signal_idx(sig)
-        sz = len(samples)
-        zeroCount = 0
-        for s in samples[::-1]:
-            if s == 0:
-                zeroCount += 1
+        i = len(indices) - 1
+        while i >= indices[0]:
+            if sig[indices[i]][0] == 0:  # if sample eq 0
+                sig.pop(indices[i])
+                i -= 1
             else:
                 break
-        sig = sp.signal(
-            sig["periodic"],
-            sig["signal_type"],
-            indices[: sz - zeroCount],
-            samples[: sz - zeroCount],
-        )
 
     return sig
 
@@ -429,112 +417,3 @@ if __name__ == "__main__":
                     test_file, sp.signal_idx(sig), sp.signal_samples(sig)
                 )
             )
-
-
-# resampling
-def lowpass_filter_manual(signal, cutoff, fs):
-    """
-    Manually applies a lowpass filter using a basic moving average method.
-
-    Parameters:
-        signal (list): Input signal
-        cutoff (float): Cutoff frequency
-        fs (int): Sampling frequency
-
-    Returns:
-        list: Filtered signal
-    """
-    RC = 1.0 / (2 * np.pi * cutoff)  # Time constant
-    dt = 1.0 / fs  # Time step
-    alpha = dt / (RC + dt)
-    filtered_signal = [signal[0]]  # Initialize with the first value
-    for i in range(1, len(signal)):
-        filtered_signal.append(
-            filtered_signal[-1] + alpha * (signal[i] - filtered_signal[-1])
-        )
-    return filtered_signal
-
-
-def upsample_manual(signal, L):
-    """
-    Upsamples a signal by inserting zeros.
-
-    Parameters:
-        signal (list): Input signal
-        L (int): Interpolation factor
-
-    Returns:
-        list: Upsampled signal
-    """
-    upsampled = [0] * (len(signal) * L)
-    for i, value in enumerate(signal):
-        upsampled[i * L] = value
-    return upsampled
-
-
-def downsample_manual(signal, M):
-    """
-    Downsamples a signal by keeping every Mth sample.
-
-    Parameters:
-        signal (list): Input signal
-        M (int): Decimation factor
-
-    Returns:
-        list: Downsampled signal
-    """
-    return signal[::M]
-
-
-def resample_without_libs(signal, M, L, lowpass_cutoff, fs):
-    """
-    Resamples a signal manually without using libraries.
-
-    Parameters:
-        signal (list): Input signal
-        M (int): Decimation factor
-        L (int): Interpolation factor
-        lowpass_cutoff (float): Lowpass filter cutoff frequency
-        fs (int): Sampling frequency
-
-    Returns:
-        list: Resampled signal
-    """
-    if M == 0 and L == 0:
-        raise ValueError("At least one of M or L must be non-zero.")
-
-    # Case 1: Upsampling
-    if M == 0 and L != 0:
-        upsampled_signal = upsample_manual(signal, L)
-        filtered_signal = lowpass_filter_manual(
-            upsampled_signal, lowpass_cutoff, fs * L
-        )
-        return filtered_signal
-
-    # Case 2: Downsampling
-    elif M != 0 and L == 0:
-        filtered_signal = lowpass_filter_manual(signal, lowpass_cutoff, fs)
-        downsampled_signal = downsample_manual(filtered_signal, M)
-        return downsampled_signal
-
-    # Case 3: Change sample rate by fraction
-    elif M != 0 and L != 0:
-        upsampled_signal = upsample_manual(signal, L)
-        filtered_signal = lowpass_filter_manual(
-            upsampled_signal, lowpass_cutoff, fs * L
-        )
-        resampled_signal = downsample_manual(filtered_signal, M)
-        return resampled_signal
-
-
-# Input from the user
-# signal = [float(x) for x in input("Enter the signal values separated by spaces: ").split()]
-# M = int(input("Enter the decimation factor M: "))
-# L = int(input("Enter the interpolation factor L: "))
-# lowpass_cutoff = float(input("Enter the lowpass filter cutoff frequency: "))
-# fs = int(input("Enter the sampling frequency of the input signal: "))
-#
-# # Resample the signal
-# resampled_signal = resample_without_libs(signal, M, L, lowpass_cutoff, fs)
-#
-# print("Resampled signal:", resampled_signal)
