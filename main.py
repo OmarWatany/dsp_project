@@ -257,15 +257,11 @@ def Filter():
         # output
         filter_cofficionts = sp.sig_filter(filter, fs, transitionBand, stopA, f1, f2)
 
-    apply_filter = st.button(label="Filter")
-    if apply_filter:
-        if sig:
-            sig = sp.convolution(sig, filter_cofficionts)
-            return sig, uploaded_file
-        else:
-            return filter_cofficionts, uploaded_file
-    else:
+    if sig:
+        sig = sp.convolution(sig, filter_cofficionts)
         return sig, uploaded_file
+    else:
+        return filter_cofficionts, uploaded_file
 
 
 def Time_Domain():

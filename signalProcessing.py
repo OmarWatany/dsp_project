@@ -460,10 +460,9 @@ def window_function(sA, deltaF):
 
     def calcN(x):
         n = int(math.ceil(x / deltaF))
-        if n % 2:
-            return n
-        else:
-            return n + 1
+        if not n % 2:
+            n += 1
+        return n
 
     if sA <= 21:
         N = calcN(0.9)
@@ -477,14 +476,21 @@ def window_function(sA, deltaF):
         N = calcN(3.1)
 
         def hanning(n):
-            return 0.5 + 0.5 * math.cos(2 * math.pi * n / N)
+            if n == 0:
+                return 1
+            else:
+                return 0.5 + 0.5 * math.cos(2 * math.pi * n / N)
 
         w = hanning
+
     elif sA <= 53:
         N = calcN(3.3)
 
         def hamming(n):
-            return 0.54 + 0.46 * math.cos(2 * math.pi * n / N)
+            if n == 0:
+                return 1
+            else:
+                return 0.54 + 0.46 * math.cos(2 * math.pi * n / N)
 
         w = hamming
 
@@ -492,11 +498,14 @@ def window_function(sA, deltaF):
         N = calcN(5.5)
 
         def blackman(n):
-            return (
-                0.42
-                + 0.5 * math.cos(2 * math.pi * n / (N - 1))
-                + 0.08 * math.cos(4 * math.pi * n / (N - 1))
-            )
+            if n == 0:
+                return 1
+            else:
+                return (
+                    0.42
+                    + 0.5 * math.cos(2 * math.pi * n / (N - 1))
+                    + 0.08 * math.cos(4 * math.pi * n / (N - 1))
+                )
 
         w = blackman
 
@@ -505,6 +514,7 @@ def window_function(sA, deltaF):
 
 def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
     deltaF = tband
+    f1 = fc
     N, wfn = window_function(sA, deltaF)
 
     def base_function(n, f):
@@ -519,7 +529,7 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
 
     def high_pass(n, FC):
         if n != 0:
-            return 0 - base_function(n, FC)
+            return -base_function(n, FC)
         else:
             return 1 - (2 * FC)
 
@@ -545,16 +555,17 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
     halfN = int(N / 2)
     indices = [i for i in range(-halfN, halfN + 1)]
     coffecients = []
+
     if filter in ["Low pass", "High pass"]:
-        fc += deltaF / 2
-        for n in range(halfN, 0, -1):
-            coffecients.append(filters[filter](n, fc) * wfn(n))
-        for n in range(0, halfN + 1):
+        fc += (deltaF / 2) if filter == "Low pass" else (-deltaF / 2)
+        for n in range(-halfN, halfN + 1):
             coffecients.append(filters[filter](n, fc) * wfn(n))
 
     elif filter in ["Band pass", "Band stop"]:
+        f1 -= (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
+        f2 += (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
         for n in indices:
-            coffecients.append(filters[filter](n, fc, f2) * wfn(n))
+            coffecients.append(filters[filter](n, f1, f2) * wfn(n))
 
     return signal(
         periodic=0,
