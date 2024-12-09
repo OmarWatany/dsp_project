@@ -50,6 +50,7 @@ class Disc_Fig(Plot_Fig):
                 mode="markers",
                 marker=dict(color=color, size=8),
                 name=legend,
+                showlegend=False if legend == "" else True,
             )
         )
 
@@ -75,12 +76,12 @@ class Cont_Fig(Plot_Fig):
 def plot_freq_signal(sig, nPts: int = 50):
     indices = sp.signal_idx(sig)
     disc_fig = Disc_Fig("Frequencies", nPts)
-    disc_fig.scatter("signal", "blue", indices, sp.signal_samples(sig))
+    disc_fig.scatter("", "blue", indices, sp.signal_samples(sig))
     disc_fig.update_layout()
     disc_fig.plot()
 
     disc_fig = Disc_Fig("Phase Shifts", nPts)
-    disc_fig.scatter("signal", "red", indices, sp.signal_phase_shifts(sig))
+    disc_fig.scatter("", "red", indices, sp.signal_phase_shifts(sig))
     disc_fig.update_layout()
     disc_fig.plot()
 

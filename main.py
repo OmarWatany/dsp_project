@@ -208,8 +208,8 @@ def Corr():
 def Shift_Fold(op):
     sig, uploaded_file = Signal_Source()
     if op == "Shift":
-        steps = st.number_input("Steps (+ for Delay , - for Advance)", value=0)
         fold = st.checkbox("Fold", value=False)
+        steps = st.number_input("Steps (+ for Delay , - for Advance)", value=0)
         if fold and sig:
             sig = sp.sig_fold(sig)
         if sig:
@@ -235,9 +235,43 @@ def Shift_Fold(op):
     pass
 
 
+def Filter():
+    filters = ["Low pass", "High pass", "Band pass", "Band stop"]
+    filter = st.selectbox("**Choose Filter**", filters)
+    sig, uploaded_file = Signal_Source()
+
+    fs = st.number_input("Sampling Freq (Hz)", value=1)
+    transitionBand = st.number_input("Transition Band (Hz)", value=1) / fs
+    stopA = st.number_input("Stopband attenuation (dB)", value=1)
+
+    if filter in ["Low pass", "High pass"]:
+        # input
+        fc = st.number_input("Cutoff Freq (Hz)", value=1) / fs
+        # output
+        filter_cofficionts = sp.sig_filter(filter, fs, transitionBand, stopA, fc)
+
+    elif filter in ["Band pass", "Band stop"]:
+        # input
+        f1 = st.number_input("F1 (Hz)", value=1) / fs
+        f2 = st.number_input("F2 (Hz)", value=1) / fs
+        # output
+        filter_cofficionts = sp.sig_filter(filter, fs, transitionBand, stopA, f1, f2)
+
+    apply_filter = st.button(label="Filter")
+    if apply_filter:
+        if sig:
+            sig = sp.convolution(sig, filter_cofficionts)
+            return sig, uploaded_file
+        else:
+            return filter_cofficionts, uploaded_file
+    else:
+        return sig, uploaded_file
+
+
 def Time_Domain():
     time_domain_ops = [
         "Remove DC component",
+        "Filter",
         "Shift",
         "Fold",
         "Sharpning",
@@ -251,6 +285,8 @@ def Time_Domain():
         winSize = st.number_input("Window Size:", min_value=1, value=2)
         if sig:
             sig = sp.sig_smoothe(sig, winSize)
+    elif op == "Filter":
+        sig, uploaded_file = Filter()
 
     elif op in ["Shift", "Fold"]:
         turn_off_test_file_input()

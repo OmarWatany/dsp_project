@@ -269,6 +269,10 @@ def fourier_transform(check=0, sig: Signal = None, fs=0):
         )
 
     elif check == 1:
+        if sig["signal_type"] == Signal_type.TIME:
+            st.error("Can't apply IDFT operation on a TIME Domain signal")
+            return None
+
         freq = signal_samples(sig)
         pha = signal_phase_shifts(sig)
         y = []
@@ -400,23 +404,17 @@ def sig_to_text(sig):
 
 def convolution(sig1: Signal, sig2: Signal) -> Signal:
     # Extract samples&indices from both signals
-    samples1, samples2 = signal_samples(sig1), signal_samples(sig2)
     indices_1, indices_2 = signal_idx(sig1), signal_idx(sig2)
-
     # indices with pairwise sum
     res_indices = sorted(set(i1 + i2 for i1 in indices_1 for i2 in indices_2))
 
-    res_samples = []
-
     # Perform convolution
+    res_samples = []
     for n in res_indices:
         result = 0
         for k in indices_1:
-            # Compute h[n-k]
-            shifted_index = n - k
-            # Only add if valid
-            if shifted_index in indices_2:
-                result += sig1.get(k, [0])[0] * sig2.get(shifted_index, [0])[0]
+            # Compute h[n-k] * x[k]
+            result += sig1.get(k, [0])[0] * sig2.get(n - k, [0])[0]
         res_samples.append(result)
 
     return signal(
@@ -453,4 +451,114 @@ def correlation(sig1: Signal, sig2: Signal) -> Signal:
 
     return signal(
         periodic=0, sig_type=Signal_type.TIME, indices=res_indices, samples=result
+    )
+
+
+def window_function(sA, deltaF):
+    N: int = 0
+    w = None
+
+    def calcN(x):
+        n = int(math.ceil(x / deltaF))
+        if n % 2:
+            return n
+        else:
+            return n + 1
+
+    if sA <= 21:
+        N = calcN(0.9)
+
+        def rect(n):
+            return 1
+
+        w = rect
+
+    elif sA <= 44:
+        N = calcN(3.1)
+
+        def hanning(n):
+            return 0.5 + 0.5 * math.cos(2 * math.pi * n / N)
+
+        w = hanning
+    elif sA <= 53:
+        N = calcN(3.3)
+
+        def hamming(n):
+            return 0.54 + 0.46 * math.cos(2 * math.pi * n / N)
+
+        w = hamming
+
+    elif sA <= 74:
+        N = calcN(5.5)
+
+        def blackman(n):
+            return (
+                0.42
+                + 0.5 * math.cos(2 * math.pi * n / (N - 1))
+                + 0.08 * math.cos(4 * math.pi * n / (N - 1))
+            )
+
+        w = blackman
+
+    return N, w
+
+
+def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
+    deltaF = tband
+    N, wfn = window_function(sA, deltaF)
+
+    def base_function(n, f):
+        w = 2 * f * math.pi
+        return 2 * f * math.sin(w * n) / (n * w)
+
+    def low_pass(n, FC):
+        if n != 0:
+            return base_function(n, FC)
+        else:
+            return 2 * FC
+
+    def high_pass(n, FC):
+        if n != 0:
+            return 0 - base_function(n, FC)
+        else:
+            return 1 - (2 * FC)
+
+    def band_pass(n, f1, f2):
+        if n != 0:
+            return base_function(n, f2) - base_function(n, f1)
+        else:
+            return 2 * (f2 - f1)
+
+    def band_stop(n, f1, f2):
+        if n != 0:
+            return base_function(n, f1) - base_function(n, f2)
+        else:
+            return 1 - 2 * (f2 - f1)
+
+    filters = {
+        "Low pass": low_pass,
+        "High pass": high_pass,
+        "Band pass": band_pass,
+        "Band stop": band_stop,
+    }
+
+    halfN = int(N / 2)
+    indices = [i for i in range(-halfN, halfN + 1)]
+    coffecients = []
+    if filter in ["Low pass", "High pass"]:
+        fc += deltaF / 2
+        for n in range(halfN, 0, -1):
+            coffecients.append(filters[filter](n, fc) * wfn(n))
+        for n in range(0, halfN + 1):
+            coffecients.append(filters[filter](n, fc) * wfn(n))
+
+    elif filter in ["Band pass", "Band stop"]:
+        for n in indices:
+            coffecients.append(filters[filter](n, fc, f2) * wfn(n))
+
+    return signal(
+        periodic=0,
+        sig_type=Signal_type.TIME,
+        indices=indices,
+        samples=coffecients,
     )
