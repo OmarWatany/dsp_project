@@ -248,20 +248,20 @@ def Filter():
         # input
         fc = st.number_input("Cutoff Freq (Hz)", value=1) / fs
         # output
-        filter_cofficionts = sp.sig_filter(filter, fs, transitionBand, stopA, fc)
+        filter_coefficients = sp.sig_filter(filter, fs, transitionBand, stopA, fc)
 
     elif filter in ["Band pass", "Band stop"]:
         # input
         f1 = st.number_input("F1 (Hz)", value=1) / fs
         f2 = st.number_input("F2 (Hz)", value=1) / fs
         # output
-        filter_cofficionts = sp.sig_filter(filter, fs, transitionBand, stopA, f1, f2)
+        filter_coefficients = sp.sig_filter(filter, fs, transitionBand, stopA, f1, f2)
 
     if sig:
-        sig = sp.convolution(sig, filter_cofficionts)
+        sig = sp.convolution(sig, filter_coefficients)
         return sig, uploaded_file
     else:
-        return filter_cofficionts, uploaded_file
+        return filter_coefficients, uploaded_file
 
 
 def Time_Domain():

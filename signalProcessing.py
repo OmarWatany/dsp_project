@@ -554,22 +554,22 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
 
     halfN = int(N / 2)
     indices = [i for i in range(-halfN, halfN + 1)]
-    coffecients = []
+    coefficients = []
 
     if filter in ["Low pass", "High pass"]:
         fc += (deltaF / 2) if filter == "Low pass" else (-deltaF / 2)
         for n in range(-halfN, halfN + 1):
-            coffecients.append(filters[filter](n, fc) * wfn(n))
+            coefficients.append(filters[filter](n, fc) * wfn(n))
 
     elif filter in ["Band pass", "Band stop"]:
         f1 -= (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
         f2 += (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
         for n in indices:
-            coffecients.append(filters[filter](n, f1, f2) * wfn(n))
+            coefficients.append(filters[filter](n, f1, f2) * wfn(n))
 
     return signal(
         periodic=0,
         sig_type=Signal_type.TIME,
         indices=indices,
-        samples=coffecients,
+        samples=coefficients,
     )
