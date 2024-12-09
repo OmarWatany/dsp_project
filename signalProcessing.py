@@ -573,3 +573,36 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
         indices=indices,
         samples=coefficients,
     )
+
+
+def sig_upsample_resample(sig, L):
+    samples = signal_samples(sig)
+    indices = signal_idx(sig)
+    samplesSz = len(samples)
+
+    newSz = samplesSz * L
+    upsamples = [0] * newSz
+    # upsamplesIndices = [0] * newSz
+    upsamplesIndices = [i for i in range(newSz)]
+
+    for i in range(samplesSz):
+        upsamples[i * L] = samples[i]
+        # upsamplesIndices[i * L] = indices[i]
+
+    return signal(
+        periodic=0,
+        sig_type=Signal_type.TIME,
+        indices=upsamplesIndices,
+        samples=upsamples,
+    )
+
+
+def sig_downsample_resample(sig, M):
+    samples = signal_samples(sig)
+    indices = signal_idx(sig)
+    return signal(
+        periodic=0,
+        sig_type=Signal_type.TIME,
+        indices=indices[::M],
+        samples=samples[::M],
+    )
