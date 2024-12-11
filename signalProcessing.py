@@ -513,25 +513,31 @@ def window_function(sA, deltaF):
 
 
 def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
-    deltaF = tband
-    f1 = fc
+    if not fc or not f2 or not tband:
+        return None
+
+    # normalize
+    fc /= fs
+    f2 /= fs
+    deltaF = tband / fs
+
     N, wfn = window_function(sA, deltaF)
 
     def base_function(n, f):
         w = 2 * f * math.pi
         return 2 * f * math.sin(w * n) / (n * w)
 
-    def low_pass(n, FC):
+    def low_pass(n, fc, dis=0):
         if n != 0:
-            return base_function(n, FC)
+            return base_function(n, fc)
         else:
-            return 2 * FC
+            return 2 * fc
 
-    def high_pass(n, FC):
+    def high_pass(n, fc, dis=0):
         if n != 0:
-            return -base_function(n, FC)
+            return -base_function(n, fc)
         else:
-            return 1 - (2 * FC)
+            return 1 - (2 * fc)
 
     def band_pass(n, f1, f2):
         if n != 0:
@@ -556,16 +562,15 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
     indices = [i for i in range(-halfN, halfN + 1)]
     coefficients = []
 
-    if filter in ["Low pass", "High pass"]:
-        fc += (deltaF / 2) if filter == "Low pass" else (-deltaF / 2)
-        for n in range(-halfN, halfN + 1):
-            coefficients.append(filters[filter](n, fc) * wfn(n))
-
-    elif filter in ["Band pass", "Band stop"]:
-        f1 -= (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
-        f2 += (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
-        for n in indices:
+    fc += (deltaF / 2) if filter in ["Low pass", "Band stop"] else (-deltaF / 2)
+    f1 = fc
+    f2 += (deltaF / 2) if filter == "Band pass" else (-deltaF / 2)
+    for n in indices:
+        try:
             coefficients.append(filters[filter](n, f1, f2) * wfn(n))
+        except ZeroDivisionError:
+            st.error("ZeroDivisionError Caught")
+            return None
 
     return signal(
         periodic=0,
@@ -576,6 +581,8 @@ def sig_filter(filter, fs, tband, sA, fc=0, f2=0):
 
 
 def sig_upsample_resample(sig, L):
+    if not L or not sig:
+        return None
     samples = signal_samples(sig)
     samplesSz = len(samples)
 
@@ -595,6 +602,8 @@ def sig_upsample_resample(sig, L):
 
 
 def sig_downsample_resample(sig, M):
+    if not M or not sig:
+        return None
     samples = signal_samples(sig)
     indices = [i for i in range(int(len(samples) / M))]
     return signal(

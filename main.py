@@ -236,24 +236,29 @@ def Shift_Fold(op):
 
 
 def Filter(filter, sig):
-    fs = st.number_input("Sampling Freq (Hz)", value=1)
-    transitionBand = st.number_input("Transition Band (Hz)", value=1) / fs
-    stopA = st.number_input("Stopband attenuation (dB)", value=1)
+    fs = st.number_input("Sampling Freq (Hz)", value=0)
+    transitionBand = st.number_input("Transition Band (Hz)", value=0)
+    stopA = st.number_input("Stopband attenuation (dB)", value=0)
 
     if filter in ["Low pass", "High pass"]:
         # input
-        fc = st.number_input("Cutoff Freq (Hz)", value=1) / fs
+        fc = st.number_input("Cutoff Freq (Hz)", value=0)
         # output
-        filter_coefficients = sp.sig_filter(filter, fs, transitionBand, stopA, fc)
+        filter_coefficients = sp.sig_filter(filter, fs, transitionBand, stopA, fc, 1)
 
     elif filter in ["Band pass", "Band stop"]:
         # input
-        f1 = st.number_input("F1 (Hz)", value=1) / fs
-        f2 = st.number_input("F2 (Hz)", value=1) / fs
+        f1 = st.number_input("F1 (Hz)", value=0)
+        f2 = st.number_input("F2 (Hz)", value=0)
         # output
-        filter_coefficients = sp.sig_filter(filter, fs, transitionBand, stopA, f1, f2)
+        try:
+            filter_coefficients = sp.sig_filter(
+                filter, fs, transitionBand, stopA, f1, f2
+            )
+        except ZeroDivisionError:
+            st.error("ZeroDivisionError Caught")
 
-    if sig:
+    if sig and filter_coefficients:
         sig = sp.convolution(sig, filter_coefficients)
         return sig
     else:
@@ -265,37 +270,39 @@ def Resample(sig):
         return None
     M = st.number_input("Decimation Factor", value=0)
     L = st.number_input("Interpolation Factor", value=0)
+    out_sig = None
 
-    if M == 0 and L != 0:
-        sig = sp.sig_upsample_resample(sig, L)
-        sig = Filter("Low pass", sig)
+    if not M and not L:
+        return None
+    elif M == 0 and L != 0:
+        out_sig = Filter("Low pass", sp.sig_upsample_resample(sig, L))
         # remove the last zeros
-        indices = sp.signal_idx(sig)
-        i = len(indices) - 1
-        while i >= indices[0]:
-            if sig[indices[i]][0] == 0:  # if sample eq 0
-                sig.pop(indices[i])
-                i -= 1
-            else:
-                break
-    elif M != 0 and L == 0:
-        sig = Filter("Low pass", sig)
-        sig = sp.sig_downsample_resample(sig, M)
+        if out_sig:
+            indices = sp.signal_idx(out_sig)
+            i = len(indices) - 1
+            while i >= indices[0]:
+                if out_sig[indices[i]][0] == 0:  # if sample eq 0
+                    out_sig.pop(indices[i])
+                    i -= 1
+                else:
+                    break
+    elif M and not L:
+        out_sig = sp.sig_downsample_resample(Filter("Low pass", sig), M)
     else:
-        sig = sp.sig_upsample_resample(sig, L)
-        sig = Filter("Low pass", sig)
-        sig = sp.sig_downsample_resample(sig, M)
+        out_sig = sp.sig_upsample_resample(sig, L)
+        out_sig = sp.sig_downsample_resample(Filter("Low pass", out_sig), M)
         # remove the last zeros
-        indices = sp.signal_idx(sig)
-        i = len(indices) - 1
-        while i >= indices[0]:
-            if sig[indices[i]][0] == 0:  # if sample eq 0
-                sig.pop(indices[i])
-                i -= 1
-            else:
-                break
+        if out_sig:
+            indices = sp.signal_idx(out_sig)
+            i = len(indices) - 1
+            while i >= indices[0]:
+                if out_sig[indices[i]][0] == 0:  # if sample eq 0
+                    out_sig.pop(indices[i])
+                    i -= 1
+                else:
+                    break
 
-    return sig
+    return out_sig
 
 
 def Time_Domain():
